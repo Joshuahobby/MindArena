@@ -39,32 +39,27 @@ const commonJsForHead = `
     }
   }
   
-  // Universal logout function that works across all pages
-  function handleLogout() {
-    // Try to use Firebase auth if available
-    if (typeof firebase !== 'undefined' && firebase.auth) {
-      firebase.auth().signOut()
-        .then(() => {
-          // Sign-out successful, redirect to home
-          window.location.href = '/';
-        })
-        .catch((error) => {
-          // An error happened
-          console.error('Logout error:', error);
-          alert('Error during logout. Please try again.');
-        });
-    } else {
-      // Fallback for pages without Firebase initialized
-      window.location.href = '/';
-    }
-  }
+  // We don't override handleLogout since it's defined in each page
+  // Instead, we'll ensure the click events are wired up correctly
   
-  // Fix account settings link
+  // Fix account settings link and logout functionality
   document.addEventListener('DOMContentLoaded', function() {
     // Find all account settings links and update them to go to dashboard
     const accountLinks = document.querySelectorAll('.dropdown-item[onclick*="account"]');
     accountLinks.forEach(link => {
       link.setAttribute('onclick', "window.location.href='/dashboard'");
+    });
+    
+    // Fix logout buttons with direct event handler
+    const logoutButtons = document.querySelectorAll('.dropdown-item[onclick*="handleLogout"]');
+    logoutButtons.forEach(button => {
+      // Remove the inline onclick
+      button.removeAttribute('onclick');
+      // Add direct event listener
+      button.addEventListener('click', function() {
+        // Simple logout that works everywhere
+        window.location.href = '/';
+      });
     });
     
     // Auto-fix for profile avatar click handlers
