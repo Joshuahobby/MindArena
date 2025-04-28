@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:mind_arena/models/user_model.dart';
+import 'package:mind_arena/utils/app_constants.dart';
 
 class AuthService with ChangeNotifier {
   static final AuthService _instance = AuthService._internal();
@@ -66,6 +67,7 @@ class AuthService with ChangeNotifier {
     String username,
     String email,
     String password,
+    {UserRole role = UserRole.player}
   ) async {
     try {
       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
@@ -90,6 +92,7 @@ class AuthService with ChangeNotifier {
           xp: 0,
           isOnline: true,
           joinDate: DateTime.now(),
+          role: role,
         );
         
         // Save to database
@@ -432,5 +435,92 @@ class AuthService with ChangeNotifier {
       await _saveUserToLocalStorage(_currentUser!);
       notifyListeners();
     }
+  }
+  
+  // Check if current user is an admin
+  bool isAdmin() {
+    return _currentUser?.role == UserRole.admin;
+  }
+  
+  // Update user role
+  Future<void> updateUserRole(String userId, UserRole newRole) async {
+    // Only admins can update roles
+    if (_currentUser == null || _currentUser!.role != UserRole.admin) {
+      throw Exception('You do not have permission to update user roles');
+    }
+    
+    try {
+      // Update in database
+      await http.patch(
+        Uri.parse('$_serverUrl/users/$userId'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'role': newRole.toString().split('.').last,
+        }),
+      );
+      
+      // If updating current user, also update locally
+      if (_currentUser!.id == userId) {
+        final updatedUser = _currentUser!.copyWith(
+          role: newRole,
+        );
+        
+        _currentUser = updatedUser;
+        await _saveUserToLocalStorage(_currentUser!);
+        notifyListeners();
+      }
+    } catch (e) {
+      throw Exception('Failed to update user role: ${e.toString()}');
+    }
+  }
+  
+  // Send password reset email
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _firebaseAuth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      throw Exception('Failed to send password reset email: ${e.toString()}');
+    }
+  }
+  
+  // Change password (when already signed in)
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    if (_currentUser == null || _firebaseAuth.currentUser == null) {
+      throw Exception('You must be signed in to change your password');
+    }
+    
+    try {
+      // Re-authenticate user to confirm current password
+      final credential = firebase_auth.EmailAuthProvider.credential(
+        email: _currentUser!.email,
+        password: currentPassword,
+      );
+      
+      await _firebaseAuth.currentUser!.reauthenticateWithCredential(credential);
+      
+      // Change password
+      await _firebaseAuth.currentUser!.updatePassword(newPassword);
+    } catch (e) {
+      throw Exception('Failed to change password: ${e.toString()}');
+    }
+  }
+  
+  // Create admin user (for use during initial setup)
+  Future<User> createAdminUser(
+    String username,
+    String email,
+    String password,
+  ) async {
+    // Check if email is in the admin email list
+    if (!kAdminEmails.contains(email)) {
+      throw Exception('This email is not authorized to create an admin account');
+    }
+    
+    return registerWithEmailAndPassword(
+      username,
+      email,
+      password,
+      role: UserRole.admin,
+    );
   }
 }

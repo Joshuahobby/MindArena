@@ -1,3 +1,8 @@
+enum UserRole {
+  player,
+  admin,
+}
+
 class User {
   final String id;
   final String username;
@@ -14,6 +19,7 @@ class User {
   final Map<String, dynamic>? stats;
   final Map<String, dynamic>? preferences;
   final List<String>? friends;
+  final UserRole role;
 
   User({
     required this.id,
@@ -31,6 +37,7 @@ class User {
     this.stats,
     this.preferences,
     this.friends,
+    this.role = UserRole.player,
   });
 
   // Create a copy with updated fields
@@ -50,6 +57,7 @@ class User {
     Map<String, dynamic>? stats,
     Map<String, dynamic>? preferences,
     List<String>? friends,
+    UserRole? role,
   }) {
     return User(
       id: id ?? this.id,
@@ -67,11 +75,20 @@ class User {
       stats: stats ?? this.stats,
       preferences: preferences ?? this.preferences,
       friends: friends ?? this.friends,
+      role: role ?? this.role,
     );
   }
 
   // Create from JSON
   factory User.fromJson(Map<String, dynamic> json) {
+    // Parse the role from JSON
+    UserRole role = UserRole.player;
+    if (json['role'] != null) {
+      if (json['role'] == 'admin') {
+        role = UserRole.admin;
+      }
+    }
+
     return User(
       id: json['id'] ?? '',
       username: json['username'] ?? 'Player',
@@ -94,6 +111,7 @@ class User {
       friends: json['friends'] != null
           ? List<String>.from(json['friends'])
           : null,
+      role: role,
     );
   }
 
@@ -115,6 +133,7 @@ class User {
       'stats': stats,
       'preferences': preferences,
       'friends': friends,
+      'role': role.toString().split('.').last, // Convert enum to string
     };
   }
 }
