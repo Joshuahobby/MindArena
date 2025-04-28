@@ -16,6 +16,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "firebase": "^11.6.1",
     "nodemon": "^3.1.10",
     "ws": "^8.18.1"
   }

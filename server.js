@@ -1,16 +1,30 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const firebase = require('firebase/app');
+require('firebase/auth');
 
 // Initialize express app
 const app = express();
 const port = process.env.PORT || 5000;
 
+// Initialize Firebase with environment variables
+const firebaseConfig = {
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: `${process.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: `${process.env.VITE_FIREBASE_PROJECT_ID}.appspot.com`,
+  appId: process.env.VITE_FIREBASE_APP_ID
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Serve a simple landing page
+// Serve a landing page with Firebase authentication
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -200,6 +214,10 @@ app.get('/', (req, res) => {
           color: #6C5CE7;
         }
       </style>
+      <!-- Firebase App (the core Firebase SDK) -->
+      <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+      <!-- Firebase Auth -->
+      <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     </head>
     <body>
       <div id="loginModal" class="auth-modal">
@@ -214,7 +232,7 @@ app.get('/', (req, res) => {
             <label for="password">Password</label>
             <input type="password" id="password" placeholder="Enter your password" required>
             
-            <button type="submit" class="button" style="width: 100%; margin-bottom: 16px;">LOGIN</button>
+            <button type="button" onclick="handleLogin()" class="button" style="width: 100%; margin-bottom: 16px;">LOGIN</button>
             
             <div style="text-align: center; margin-bottom: 16px;">
               <p style="margin-bottom: 10px; color: #B2BEC3;">OR</p>
@@ -307,14 +325,26 @@ app.get('/', (req, res) => {
       
       <div class="bottom-nav">
         <div class="nav-links">
-          <a href="/about" class="nav-link">About</a>
-          <a href="/features" class="nav-link">Features</a>
-          <a href="/contact" class="nav-link">Contact</a>
-          <a href="/privacy" class="nav-link">Privacy Policy</a>
+          <a href="#" onclick="navLinkClick('about')" class="nav-link">About</a>
+          <a href="#" onclick="navLinkClick('features')" class="nav-link">Features</a>
+          <a href="#" onclick="navLinkClick('contact')" class="nav-link">Contact</a>
+          <a href="#" onclick="navLinkClick('privacy')" class="nav-link">Privacy Policy</a>
         </div>
       </div>
       
       <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+          apiKey: "${process.env.VITE_FIREBASE_API_KEY}",
+          authDomain: "${process.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com",
+          projectId: "${process.env.VITE_FIREBASE_PROJECT_ID}",
+          storageBucket: "${process.env.VITE_FIREBASE_PROJECT_ID}.appspot.com",
+          appId: "${process.env.VITE_FIREBASE_APP_ID}"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        
+        // UI functions
         function showModal(modalId) {
           document.getElementById(modalId).classList.add('show');
         }
@@ -326,6 +356,10 @@ app.get('/', (req, res) => {
         function navigateTo(page) {
           alert('This would navigate to the ' + page + ' screen in the real app. For now, please login or register to continue.');
           showModal('loginModal');
+        }
+        
+        function navLinkClick(page) {
+          showSuccess('This would navigate to the ' + page + ' page in the full app');
         }
         
         // Close modals when clicking outside
@@ -345,11 +379,11 @@ app.get('/', (req, res) => {
         // Show an error message in the form
         function showFormError(formId, message) {
           // Check if an error element already exists, if not create one
-          let errorElement = document.getElementById(`${formId}-error`);
+          let errorElement = document.getElementById(formId + '-error');
           
           if (!errorElement) {
             errorElement = document.createElement('div');
-            errorElement.id = `${formId}-error`;
+            errorElement.id = formId + '-error';
             errorElement.className = 'error-message';
             errorElement.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
             errorElement.style.color = '#ff5252';
@@ -363,13 +397,13 @@ app.get('/', (req, res) => {
             form.insertBefore(errorElement, form.firstChild);
           }
           
-          errorElement.innerHTML = `<strong>Error:</strong> ${message}`;
+          errorElement.innerHTML = '<strong>Error:</strong> ' + message;
           errorElement.style.display = 'block';
         }
         
         // Clear any form errors
         function clearFormError(formId) {
-          const errorElement = document.getElementById(`${formId}-error`);
+          const errorElement = document.getElementById(formId + '-error');
           if (errorElement) {
             errorElement.style.display = 'none';
           }
@@ -380,15 +414,7 @@ app.get('/', (req, res) => {
           // Create a success toast
           const toast = document.createElement('div');
           toast.className = 'success-toast';
-          toast.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-              </svg>
-              <span>${message}</span>
-            </div>
-          `;
+          toast.innerHTML = '<div style="display: flex; align-items: center; gap: 8px;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg><span>' + message + '</span></div>';
           
           // Style the toast
           Object.assign(toast.style, {
@@ -423,29 +449,38 @@ app.get('/', (req, res) => {
         
         // Google Sign-In function
         function signInWithGoogle() {
-          try {
-            // In a real app, this would use Firebase Authentication with Google
-            console.log('Google Sign-In initiated');
-            
-            // Simulate API call
-            setTimeout(() => {
-              // Show success message
-              showSuccess('Successfully signed in with Google!');
+          clearFormError('loginForm');
+          clearFormError('registerForm');
+          
+          const googleProvider = new firebase.auth.GoogleAuthProvider();
+          
+          firebase.auth().signInWithPopup(googleProvider)
+            .then((result) => {
+              // This gives you a Google Access Token
+              const credential = result.credential;
+              const token = credential.accessToken;
+              // The signed-in user info
+              const user = result.user;
               
-              // Close both modals to make sure
+              console.log('Successfully signed in with Google:', user.displayName);
+              showSuccess('Welcome ' + user.displayName + '! Successfully signed in with Google!');
+              
+              // Close both modals
               closeModal('loginModal');
               closeModal('registerModal');
-            }, 1000);
-          } catch (error) {
-            console.error('Google Sign-In error:', error);
-            showFormError('loginForm', 'Failed to sign in with Google. Please try again.');
-          }
+            })
+            .catch((error) => {
+              // Handle Errors here
+              const errorCode = error.code;
+              const errorMessage = error.message;
+              console.error('Google Sign-In error:', errorCode, errorMessage);
+              
+              showFormError('loginForm', 'Failed to sign in with Google: ' + errorMessage);
+            });
         }
         
-        // Handle form submissions
-        document.getElementById('loginForm').addEventListener('submit', function(event) {
-          event.preventDefault();
-          
+        // Handle login form submission
+        function handleLogin() {
           // Clear previous errors
           clearFormError('loginForm');
           
@@ -464,39 +499,55 @@ app.get('/', (req, res) => {
               return;
             }
             
-            // Simulate loading state
-            const submitButton = event.target.querySelector('button[type="submit"]');
-            const originalText = submitButton.innerHTML;
-            submitButton.innerHTML = 'Logging in...';
-            submitButton.disabled = true;
+            // Get the login button
+            const loginButton = document.querySelector('#loginForm button[type="button"]');
+            const originalText = loginButton.innerHTML;
+            loginButton.innerHTML = 'Logging in...';
+            loginButton.disabled = true;
             
-            // In a real app, this would be an API call to Firebase
-            console.log('Login initiated for:', email);
-            
-            // Simulate API call
-            setTimeout(() => {
-              // Reset button
-              submitButton.innerHTML = originalText;
-              submitButton.disabled = false;
-              
-              // Show success message
-              showSuccess('Successfully logged in!');
-              
-              // Close modal
-              closeModal('loginModal');
-            }, 1000);
+            // Authenticate with Firebase
+            firebase.auth().signInWithEmailAndPassword(email, password)
+              .then((userCredential) => {
+                // User signed in successfully
+                const user = userCredential.user;
+                console.log('User logged in successfully:', user.email);
+                
+                // Reset button
+                loginButton.innerHTML = originalText;
+                loginButton.disabled = false;
+                
+                // Show success message
+                showSuccess('Successfully logged in!');
+                
+                // Close modal
+                closeModal('loginModal');
+              })
+              .catch((error) => {
+                // Reset button
+                loginButton.innerHTML = originalText;
+                loginButton.disabled = false;
+                
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                console.error('Login error:', errorCode, errorMessage);
+                
+                // Show appropriate error message
+                if (errorCode === 'auth/user-not-found') {
+                  showFormError('loginForm', 'No user found with this email address.');
+                } else if (errorCode === 'auth/wrong-password') {
+                  showFormError('loginForm', 'Incorrect password. Please try again.');
+                } else {
+                  showFormError('loginForm', 'Login failed: ' + errorMessage);
+                }
+              });
           } catch (error) {
             console.error('Login error:', error);
-            showFormError('loginForm', 'An error occurred during login. Please try again.');
+            showFormError('loginForm', 'An unexpected error occurred. Please try again.');
           }
-        });
+        }
         
-        // Function to handle registration form submission
-        function handleRegister(event) {
-          if (event) {
-            event.preventDefault();
-          }
-          
+        // Handle registration form submission
+        function handleRegister() {
           // Clear previous errors
           clearFormError('registerForm');
           
@@ -538,29 +589,65 @@ app.get('/', (req, res) => {
             registerButton.innerHTML = 'Creating account...';
             registerButton.disabled = true;
             
-            // In a real app, this would be an API call to Firebase
-            console.log('Registration initiated for:', username, email);
-            
-            // Simulate API call
-            setTimeout(() => {
-              // Reset button
-              registerButton.innerHTML = originalText;
-              registerButton.disabled = false;
-              
-              // Show success message
-              showSuccess('Account created successfully!');
-              
-              // Close modal
-              closeModal('registerModal');
-            }, 1000);
+            // Create a new user with Firebase Auth
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+              .then((userCredential) => {
+                // User account created successfully
+                const user = userCredential.user;
+                console.log('User registered successfully:', user.email);
+                
+                // Set the display name
+                return user.updateProfile({
+                  displayName: username
+                }).then(() => {
+                  // Reset button
+                  registerButton.innerHTML = originalText;
+                  registerButton.disabled = false;
+                  
+                  // Show success message
+                  showSuccess('Account created successfully! Welcome ' + username + '!');
+                  
+                  // Close modal
+                  closeModal('registerModal');
+                });
+              })
+              .catch((error) => {
+                // Reset button
+                registerButton.innerHTML = originalText;
+                registerButton.disabled = false;
+                
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                console.error('Registration error:', errorCode, errorMessage);
+                
+                // Show appropriate error message
+                if (errorCode === 'auth/email-already-in-use') {
+                  showFormError('registerForm', 'This email address is already in use. Please try another one.');
+                } else if (errorCode === 'auth/invalid-email') {
+                  showFormError('registerForm', 'Please enter a valid email address.');
+                } else if (errorCode === 'auth/weak-password') {
+                  showFormError('registerForm', 'Please choose a stronger password.');
+                } else {
+                  showFormError('registerForm', 'Registration failed: ' + errorMessage);
+                }
+              });
           } catch (error) {
             console.error('Registration error:', error);
-            showFormError('registerForm', 'An error occurred during registration. Please try again.');
+            showFormError('registerForm', 'An unexpected error occurred. Please try again.');
           }
         }
         
-        // Add event listener to the registration form
-        document.getElementById('registerForm').addEventListener('submit', handleRegister);
+        // Check if user is already signed in
+        firebase.auth().onAuthStateChanged((user) => {
+          if (user) {
+            // User is signed in
+            console.log('User is already signed in:', user.displayName || user.email);
+            showSuccess('Welcome back ' + (user.displayName || user.email) + '!');
+          } else {
+            // No user is signed in
+            console.log('No user is signed in');
+          }
+        });
       </script>
     </body>
     </html>
