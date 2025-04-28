@@ -532,6 +532,11 @@ app.get('/', (req, res) => {
                 
                 // Close modal
                 closeModal('loginModal');
+                
+                // Briefly show success message before redirect
+                setTimeout(() => {
+                  redirectToDashboard();
+                }, 1500);
               })
               .catch((error) => {
                 // Reset button
@@ -621,8 +626,13 @@ app.get('/', (req, res) => {
                   // Show success message
                   showSuccess('Account created successfully! Welcome ' + username + '!');
                   
-                  // Close modal
+                  // Close modal and redirect to dashboard
                   closeModal('registerModal');
+                  
+                  // Briefly show success message before redirect
+                  setTimeout(() => {
+                    redirectToDashboard();
+                  }, 1500);
                 });
               })
               .catch((error) => {
@@ -651,17 +661,409 @@ app.get('/', (req, res) => {
           }
         }
         
+        // Function to redirect to dashboard
+        function redirectToDashboard() {
+          window.location.href = '/dashboard';
+        }
+        
         // Check if user is already signed in
         firebase.auth().onAuthStateChanged((user) => {
           if (user) {
             // User is signed in
             console.log('User is already signed in:', user.displayName || user.email);
             showSuccess('Welcome back ' + (user.displayName || user.email) + '!');
+            
+            // If on the landing page, redirect to dashboard after a brief delay
+            if (window.location.pathname === '/') {
+              setTimeout(() => {
+                redirectToDashboard();
+              }, 1500);
+            }
           } else {
             // No user is signed in
             console.log('No user is signed in');
           }
         });
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// Dashboard route
+app.get('/dashboard', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>MindArena Dashboard</title>
+      <style>
+        body {
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+          margin: 0;
+          padding: 0;
+          background: linear-gradient(135deg, #2D3436 0%, #000000 100%);
+          color: white;
+          min-height: 100vh;
+        }
+        .navbar {
+          background-color: rgba(0, 0, 0, 0.7);
+          backdrop-filter: blur(10px);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 32px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        .logo {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-weight: bold;
+          font-size: 20px;
+          color: white;
+          text-decoration: none;
+        }
+        .logo-icon {
+          width: 40px;
+          height: 40px;
+          background-color: #6C5CE7;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .logo-icon svg {
+          width: 24px;
+          height: 24px;
+          fill: white;
+        }
+        .nav-links {
+          display: flex;
+          gap: 24px;
+          align-items: center;
+        }
+        .nav-link {
+          color: #B2BEC3;
+          text-decoration: none;
+          transition: color 0.3s ease;
+          font-weight: 500;
+        }
+        .nav-link:hover {
+          color: #6C5CE7;
+        }
+        .nav-link.active {
+          color: #6C5CE7;
+          font-weight: 600;
+        }
+        .profile-menu {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          cursor: pointer;
+          position: relative;
+        }
+        .profile-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background-color: #6C5CE7;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: 14px;
+          color: white;
+        }
+        .profile-name {
+          font-weight: 500;
+          color: white;
+        }
+        .content {
+          padding: 32px;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+        .dashboard-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 32px;
+        }
+        .greeting {
+          font-size: 24px;
+          font-weight: 600;
+        }
+        .button {
+          display: inline-block;
+          background-color: #6C5CE7;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 8px;
+          text-decoration: none;
+          font-weight: bold;
+          transition: all 0.3s ease;
+          border: none;
+          cursor: pointer;
+        }
+        .button:hover {
+          background-color: #5541c7;
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);
+        }
+        .cards {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 24px;
+          margin-bottom: 32px;
+        }
+        .card {
+          background-color: rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 24px;
+          transition: all 0.3s ease;
+          border: 2px solid transparent;
+        }
+        .card:hover {
+          background-color: rgba(255, 255, 255, 0.15);
+          transform: translateY(-5px);
+          border-color: rgba(108, 92, 231, 0.5);
+        }
+        .card-title {
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: #6C5CE7;
+        }
+        .card-value {
+          font-size: 32px;
+          font-weight: 700;
+          margin-bottom: 16px;
+        }
+        .card-footer {
+          font-size: 14px;
+          color: #B2BEC3;
+        }
+        .section-title {
+          font-size: 20px;
+          font-weight: 600;
+          margin-bottom: 16px;
+          color: white;
+        }
+        .upcoming-games {
+          background-color: rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 32px;
+        }
+        .game-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+          gap: 16px;
+        }
+        .game-item {
+          background-color: rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          padding: 16px;
+          transition: all 0.3s ease;
+          cursor: pointer;
+        }
+        .game-item:hover {
+          background-color: rgba(108, 92, 231, 0.2);
+        }
+        .game-title {
+          font-weight: 600;
+          margin-bottom: 8px;
+        }
+        .game-time {
+          font-size: 14px;
+          color: #B2BEC3;
+          margin-bottom: 12px;
+        }
+        .game-players {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          color: #DFE6E9;
+        }
+        .player-count {
+          background-color: rgba(255, 255, 255, 0.2);
+          border-radius: 12px;
+          padding: 4px 8px;
+        }
+        .logout-button {
+          background-color: transparent;
+          border: 2px solid #6C5CE7;
+          color: #6C5CE7;
+        }
+        .logout-button:hover {
+          background-color: rgba(108, 92, 231, 0.1);
+        }
+        #userDisplay {
+          font-weight: bold;
+          color: #6C5CE7;
+        }
+      </style>
+      <!-- Firebase App (the core Firebase SDK) -->
+      <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+      <!-- Firebase Auth -->
+      <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    </head>
+    <body>
+      <div class="navbar">
+        <a href="/dashboard" class="logo">
+          <div class="logo-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M0 0h24v24H0z" fill="none"/>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/>
+            </svg>
+          </div>
+          MindArena
+        </a>
+        
+        <div class="nav-links">
+          <a href="/dashboard" class="nav-link active">Dashboard</a>
+          <a href="#" class="nav-link">Play Now</a>
+          <a href="#" class="nav-link">Tournaments</a>
+          <a href="#" class="nav-link">Battle Pass</a>
+          <a href="#" class="nav-link">Leaderboard</a>
+        </div>
+        
+        <div class="profile-menu">
+          <div class="profile-avatar" id="profileInitial">?</div>
+          <div class="profile-name" id="profileName">...</div>
+          <button class="button logout-button" onclick="handleLogout()">Logout</button>
+        </div>
+      </div>
+      
+      <div class="content">
+        <div class="dashboard-header">
+          <div class="greeting">Welcome to MindArena, <span id="userDisplay">User</span>!</div>
+          <button class="button">Play Quick Match</button>
+        </div>
+        
+        <div class="cards">
+          <div class="card">
+            <div class="card-title">Total Matches</div>
+            <div class="card-value">0</div>
+            <div class="card-footer">Play your first match to get started</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-title">Win Rate</div>
+            <div class="card-value">0%</div>
+            <div class="card-footer">Win matches to improve your stats</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-title">MindArena Rank</div>
+            <div class="card-value">Novice</div>
+            <div class="card-footer">Complete matches to increase your rank</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-title">Battle Pass Level</div>
+            <div class="card-value">0</div>
+            <div class="card-footer">Earn XP to level up your Battle Pass</div>
+          </div>
+        </div>
+        
+        <div class="upcoming-games">
+          <div class="section-title">Upcoming Tournaments</div>
+          <div class="game-list">
+            <div class="game-item">
+              <div class="game-title">Weekly Challenge</div>
+              <div class="game-time">Starts in 2 days</div>
+              <div class="game-players">
+                <div class="player-count">125 players registered</div>
+              </div>
+            </div>
+            
+            <div class="game-item">
+              <div class="game-title">Science Showdown</div>
+              <div class="game-time">Starts in 4 days</div>
+              <div class="game-players">
+                <div class="player-count">87 players registered</div>
+              </div>
+            </div>
+            
+            <div class="game-item">
+              <div class="game-title">History Masters</div>
+              <div class="game-time">Starts in 1 week</div>
+              <div class="game-players">
+                <div class="player-count">62 players registered</div>
+              </div>
+            </div>
+            
+            <div class="game-item">
+              <div class="game-title">Ultimate Quiz Championship</div>
+              <div class="game-time">Starts in 2 weeks</div>
+              <div class="game-players">
+                <div class="player-count">210 players registered</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+          apiKey: "${process.env.VITE_FIREBASE_API_KEY}",
+          authDomain: "${process.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com",
+          projectId: "${process.env.VITE_FIREBASE_PROJECT_ID}",
+          storageBucket: "${process.env.VITE_FIREBASE_PROJECT_ID}.appspot.com",
+          appId: "${process.env.VITE_FIREBASE_APP_ID}"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        
+        // Check if user is logged in, if not redirect to home page
+        firebase.auth().onAuthStateChanged((user) => {
+          if (user) {
+            // User is signed in
+            console.log('Dashboard: User is signed in:', user.displayName || user.email);
+            updateUserInterface(user);
+          } else {
+            // No user is signed in, redirect to home
+            console.log('No user is signed in, redirecting to home');
+            window.location.href = '/';
+          }
+        });
+        
+        // Update UI with user info
+        function updateUserInterface(user) {
+          // Show username in greeting
+          const userDisplay = document.getElementById('userDisplay');
+          const profileName = document.getElementById('profileName');
+          const profileInitial = document.getElementById('profileInitial');
+          
+          const displayName = user.displayName || user.email || 'Player';
+          userDisplay.textContent = displayName;
+          profileName.textContent = displayName;
+          
+          // Show user initial in avatar
+          if (displayName) {
+            profileInitial.textContent = displayName.charAt(0).toUpperCase();
+          }
+        }
+        
+        // Handle logout
+        function handleLogout() {
+          firebase.auth().signOut()
+            .then(() => {
+              // Sign-out successful, redirect to home
+              window.location.href = '/';
+            })
+            .catch((error) => {
+              // An error happened
+              console.error('Logout error:', error);
+              alert('Error during logout. Please try again.');
+            });
+        }
       </script>
     </body>
     </html>
