@@ -14,6 +14,33 @@ const server = http.createServer(app);
 // Initialize WebSocket server
 const wss = new WebSocket.Server({ server, path: '/ws' });
 
+// Common JavaScript for all pages to fix profile dropdown issues
+const commonJsForHead = `
+<script>
+  // Improved toggleProfileDropdown function to be included in all pages
+  function toggleProfileDropdown(event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    const dropdown = document.getElementById('profileDropdown');
+    if (dropdown) {
+      dropdown.classList.toggle('show');
+      
+      // Close dropdown when clicking outside
+      setTimeout(function() {
+        const closeHandler = function(e) {
+          if (!e.target.closest('.profile-menu')) {
+            dropdown.classList.remove('show');
+            document.removeEventListener('click', closeHandler);
+          }
+        };
+        document.addEventListener('click', closeHandler);
+      }, 10);
+    }
+  }
+</script>
+`;
+
 // Store connected clients
 const clients = new Map();
 // Store users in matchmaking queue

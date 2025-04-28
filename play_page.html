@@ -1,0 +1,1291 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Play Now - MindArena</title>
+      <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+      <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+      <style>
+        /* General styles */
+        body {
+          font-family: system-ui, -apple-system, sans-serif;
+          margin: 0;
+          padding: 0;
+          background: linear-gradient(135deg, #2D3436 0%, #000000 100%);
+          color: white;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+        a {
+          text-decoration: none;
+          color: inherit;
+        }
+        .container {
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+        }
+        .content {
+          flex: 1;
+          padding: 32px;
+          max-width: 1200px;
+          margin: 0 auto;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .button {
+          display: inline-block;
+          background-color: #6C5CE7;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 8px;
+          text-decoration: none;
+          font-weight: bold;
+          transition: all 0.3s ease;
+          border: none;
+          cursor: pointer;
+        }
+        .button:hover {
+          background-color: #5A49DB;
+          transform: translateY(-2px);
+        }
+        .button:disabled {
+          background-color: #6C5CE7;
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .button-large {
+          font-size: 18px;
+          padding: 16px 32px;
+        }
+        .button-danger {
+          background-color: #d63031;
+        }
+        .button-danger:hover {
+          background-color: #b71c1c;
+        }
+        
+        /* Nav bar styles */
+        .navbar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 32px;
+          background-color: rgba(0, 0, 0, 0.2);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .logo {
+          font-size: 24px;
+          font-weight: bold;
+          color: white;
+          display: flex;
+          align-items: center;
+        }
+        .logo-icon {
+          width: 36px;
+          height: 36px;
+          background-color: #6C5CE7;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-right: 8px;
+        }
+        .nav-links {
+          display: flex;
+          gap: 16px;
+        }
+        .nav-link {
+          padding: 8px 16px;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+        .nav-link.active {
+          background-color: rgba(108, 92, 231, 0.2);
+          color: #6C5CE7;
+        }
+        .profile-menu {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+        .profile-avatar {
+          width: 40px;
+          height: 40px;
+          background-color: #6C5CE7;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+        }
+        .profile-name {
+          font-weight: bold;
+        }
+        .logout-button {
+          padding: 8px 16px;
+          font-size: 14px;
+        }
+        
+        /* Play page specific styles */
+        .play-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 32px;
+          margin-top: 32px;
+        }
+        .matchmaking-box {
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 16px;
+          padding: 32px;
+          margin-bottom: 32px;
+          text-align: center;
+          max-width: 600px;
+          width: 100%;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .matchmaking-title {
+          font-size: 28px;
+          margin: 0 0 16px 0;
+        }
+        .matchmaking-description {
+          color: #B2BEC3;
+          margin-bottom: 24px;
+          line-height: 1.5;
+        }
+        .matchmaking-actions {
+          display: flex;
+          gap: 16px;
+          justify-content: center;
+        }
+        .user-count {
+          margin-top: 16px;
+          color: #B2BEC3;
+          font-size: 14px;
+        }
+        .matchmaking-status {
+          margin-top: 24px;
+          font-size: 18px;
+          font-weight: bold;
+        }
+        
+        /* Game preparation */
+        .game-preparation {
+          display: none;
+          text-align: center;
+          margin-top: 32px;
+        }
+        .opponent-info {
+          margin-bottom: 24px;
+        }
+        .opponent-name {
+          font-size: 24px;
+          margin-bottom: 8px;
+        }
+        .vs-text {
+          font-size: 36px;
+          margin: 16px 0;
+          font-weight: bold;
+          color: #6C5CE7;
+        }
+        .preparation-timer {
+          font-size: 48px;
+          margin: 24px 0;
+          font-weight: bold;
+        }
+        
+        /* Game interface */
+        .game-interface {
+          display: none;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        .game-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 24px;
+        }
+        .player-score {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .player-name {
+          font-weight: bold;
+        }
+        .score {
+          background-color: #6C5CE7;
+          padding: 4px 12px;
+          border-radius: 16px;
+          font-weight: bold;
+        }
+        .game-timer {
+          font-size: 24px;
+          font-weight: bold;
+          color: #6C5CE7;
+        }
+        .question-container {
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 16px;
+          padding: 24px;
+          margin-bottom: 24px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .question-text {
+          font-size: 20px;
+          margin-bottom: 24px;
+          line-height: 1.5;
+        }
+        .answers-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .answer-option {
+          background-color: rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          padding: 16px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          font-size: 16px;
+          text-align: left;
+        }
+        .answer-option:hover {
+          background-color: rgba(108, 92, 231, 0.1);
+          border-color: #6C5CE7;
+        }
+        .answer-option.selected {
+          background-color: rgba(108, 92, 231, 0.3);
+          border-color: #6C5CE7;
+        }
+        .answer-option.correct {
+          background-color: rgba(46, 204, 113, 0.3);
+          border-color: #2ecc71;
+        }
+        .answer-option.incorrect {
+          background-color: rgba(231, 76, 60, 0.3);
+          border-color: #e74c3c;
+        }
+        
+        /* Game results */
+        .game-results {
+          display: none;
+          text-align: center;
+          max-width: 600px;
+          margin: 0 auto;
+        }
+        .results-title {
+          font-size: 32px;
+          margin-bottom: 16px;
+        }
+        .results-subtitle {
+          color: #B2BEC3;
+          margin-bottom: 32px;
+          font-size: 18px;
+        }
+        .results-container {
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 16px;
+          padding: 24px;
+          margin-bottom: 32px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .results-header {
+          display: flex;
+          justify-content: space-around;
+          margin-bottom: 24px;
+          font-size: 20px;
+          font-weight: bold;
+        }
+        .player-result {
+          text-align: center;
+        }
+        .player-result-name {
+          margin-bottom: 8px;
+        }
+        .player-result-score {
+          font-size: 36px;
+          color: #6C5CE7;
+        }
+        .versus-divider {
+          font-size: 24px;
+          color: #B2BEC3;
+        }
+        .winner-badge {
+          display: inline-block;
+          background-color: #f1c40f;
+          color: #2c3e50;
+          padding: 4px 12px;
+          border-radius: 16px;
+          font-weight: bold;
+          margin-top: 8px;
+          font-size: 14px;
+        }
+        .tie-badge {
+          display: inline-block;
+          background-color: #3498db;
+          color: white;
+          padding: 4px 12px;
+          border-radius: 16px;
+          font-weight: bold;
+          margin-top: 8px;
+          font-size: 14px;
+        }
+        .results-stats {
+          display: flex;
+          justify-content: space-around;
+          margin-bottom: 24px;
+        }
+        .stat-item {
+          text-align: center;
+        }
+        .stat-value {
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 4px;
+        }
+        .stat-label {
+          color: #B2BEC3;
+          font-size: 14px;
+        }
+        .results-rewards {
+          background-color: rgba(108, 92, 231, 0.1);
+          border-radius: 8px;
+          padding: 16px;
+          margin-bottom: 24px;
+          border: 1px solid rgba(108, 92, 231, 0.3);
+        }
+        .rewards-title {
+          font-size: 18px;
+          margin-bottom: 16px;
+          color: #6C5CE7;
+        }
+        .reward-item {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+        .reward-amount {
+          font-weight: bold;
+        }
+        .results-actions {
+          display: flex;
+          gap: 16px;
+          justify-content: center;
+          margin-top: 32px;
+        }
+        
+        /* Loading spinner */
+        .spinner {
+          display: inline-block;
+          width: 40px;
+          height: 40px;
+          border: 4px solid rgba(255, 255, 255, 0.1);
+          border-radius: 50%;
+          border-top-color: #6C5CE7;
+          animation: spin 1s linear infinite;
+          margin-right: 16px;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        /* Toast notification */
+        .toast {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          padding: 16px;
+          background-color: #2D3436;
+          border-left: 4px solid #6C5CE7;
+          border-radius: 4px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          display: flex;
+          align-items: center;
+          min-width: 300px;
+          transform: translateY(100px);
+          opacity: 0;
+          visibility: hidden;
+          transition: all 0.3s ease;
+          z-index: 1000;
+        }
+        .toast.show {
+          transform: translateY(0);
+          opacity: 1;
+          visibility: visible;
+        }
+        .toast-success {
+          border-color: #00b894;
+        }
+        .toast-error {
+          border-color: #d63031;
+        }
+        .toast-icon {
+          margin-right: 12px;
+          width: 24px;
+          height: 24px;
+          background-color: #6C5CE7;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .toast-success .toast-icon {
+          background-color: #00b894;
+        }
+        .toast-error .toast-icon {
+          background-color: #d63031;
+        }
+        .toast-message {
+          flex: 1;
+        }
+        .toast-close {
+          background: none;
+          border: none;
+          color: #B2BEC3;
+          cursor: pointer;
+          font-size: 16px;
+          margin-left: 12px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="navbar">
+          <a href="/" class="logo">
+            <div class="logo-icon">M</div>
+            MindArena
+          </a>
+          
+          <div class="nav-links">
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+            <a href="/play" class="nav-link active">Play Now</a>
+            <a href="/tournaments" class="nav-link">Tournaments</a>
+            <a href="/battle-pass" class="nav-link">Battle Pass</a>
+            <a href="/cosmetics" class="nav-link">Cosmetics</a>
+            <a href="#" class="nav-link">Leaderboard</a>
+          </div>
+          
+          <div class="profile-menu">
+            <div class="profile-avatar" id="profileInitial" onclick="toggleProfileDropdown()">?</div>
+            <div class="profile-dropdown" id="profileDropdown">
+              <div class="dropdown-item">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <span id="profileName">...</span>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item" onclick="window.location.href='/account'">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                Account Settings
+              </div>
+              <div class="dropdown-item" onclick="handleLogout()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+                Logout
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="content">
+          <!-- Matchmaking Section -->
+          <div class="play-container" id="matchmakingContainer">
+            <div class="matchmaking-box">
+              <h1 class="matchmaking-title">Quick Match</h1>
+              <p class="matchmaking-description">Challenge your knowledge against other players in a fast-paced quiz battle. Get matched with an opponent of similar skill level.</p>
+              
+              <div class="matchmaking-actions">
+                <button class="button button-large" id="findMatchButton" onclick="startQuickMatch()">Find Match</button>
+              </div>
+              
+              <div class="user-count" id="onlineUsersCount">
+                <span id="userCount">0</span> players online
+              </div>
+              
+              <div class="matchmaking-status" id="matchmakingStatus" style="display: none;">
+                <div class="spinner"></div>
+                Looking for opponents...
+                <button class="button button-danger" id="cancelButton" onclick="cancelMatchmaking()" style="margin-top: 16px;">Cancel</button>
+              </div>
+            </div>
+            
+            <div class="matchmaking-box">
+              <h2 class="matchmaking-title">Play with Friends</h2>
+              <p class="matchmaking-description">Create a private room and invite your friends to play together. Share the room code with them to start a match.</p>
+              
+              <div class="matchmaking-actions">
+                <button class="button" onclick="createPrivateRoom()">Create Room</button>
+                <button class="button" onclick="joinPrivateRoom()">Join Room</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Game Preparation -->
+          <div class="game-preparation" id="gamePreparation">
+            <h2>Get Ready!</h2>
+            <div class="opponent-info">
+              <p>You're playing against</p>
+              <div class="opponent-name" id="opponentName">Player123</div>
+            </div>
+            
+            <div class="vs-text">VS</div>
+            
+            <p>Game starts in</p>
+            <div class="preparation-timer" id="preparationTimer">3</div>
+          </div>
+          
+          <!-- Game Interface -->
+          <div class="game-interface" id="gameInterface">
+            <div class="game-header">
+              <div class="player-score">
+                <span class="player-name" id="playerName">You</span>
+                <span class="score" id="playerScore">0</span>
+              </div>
+              
+              <div class="game-timer" id="questionTimer">15</div>
+              
+              <div class="player-score">
+                <span class="score" id="opponentScore">0</span>
+                <span class="player-name" id="opponentNameInGame">Opponent</span>
+              </div>
+            </div>
+            
+            <div class="question-container">
+              <div class="question-text" id="questionText">
+                Loading question...
+              </div>
+              
+              <div class="answers-grid" id="answersGrid">
+                <button class="answer-option" data-index="0" onclick="selectAnswer(0)">Loading...</button>
+                <button class="answer-option" data-index="1" onclick="selectAnswer(1)">Loading...</button>
+                <button class="answer-option" data-index="2" onclick="selectAnswer(2)">Loading...</button>
+                <button class="answer-option" data-index="3" onclick="selectAnswer(3)">Loading...</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Game Results -->
+          <div class="game-results" id="gameResults">
+            <h2 class="results-title">Game Over</h2>
+            <p class="results-subtitle" id="resultSubtitle">You won the match!</p>
+            
+            <div class="results-container">
+              <div class="results-header">
+                <div class="player-result">
+                  <div class="player-result-name">You</div>
+                  <div class="player-result-score" id="finalPlayerScore">0</div>
+                  <div class="winner-badge" id="playerWinnerBadge" style="display: none;">Winner</div>
+                </div>
+                
+                <div class="versus-divider">vs</div>
+                
+                <div class="player-result">
+                  <div class="player-result-name" id="resultOpponentName">Opponent</div>
+                  <div class="player-result-score" id="finalOpponentScore">0</div>
+                  <div class="winner-badge" id="opponentWinnerBadge" style="display: none;">Winner</div>
+                </div>
+              </div>
+              
+              <div class="tie-badge" id="tieBadge" style="display: none;">Tie Game</div>
+              
+              <div class="results-stats">
+                <div class="stat-item">
+                  <div class="stat-value" id="correctAnswers">0</div>
+                  <div class="stat-label">Correct Answers</div>
+                </div>
+                
+                <div class="stat-item">
+                  <div class="stat-value" id="avgTime">0.0s</div>
+                  <div class="stat-label">Avg. Response Time</div>
+                </div>
+                
+                <div class="stat-item">
+                  <div class="stat-value" id="streakCount">0</div>
+                  <div class="stat-label">Best Streak</div>
+                </div>
+              </div>
+              
+              <div class="results-rewards">
+                <div class="rewards-title">Rewards Earned</div>
+                
+                <div class="reward-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#f1c40f">
+                    <path d="M0 0h24v24H0V0z" fill="none"/>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z"/>
+                  </svg>
+                  <span class="reward-amount" id="tokensEarned">25</span> Tokens
+                </div>
+                
+                <div class="reward-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#6C5CE7">
+                    <path d="M0 0h24v24H0V0z" fill="none"/>
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-7-2h2v-4h4v-2h-4V7h-2v4H8v2h4z"/>
+                  </svg>
+                  <span class="reward-amount" id="xpEarned">100</span> Battle Pass XP
+                </div>
+              </div>
+            </div>
+            
+            <div class="results-actions">
+              <button class="button" onclick="playAgain()">Play Again</button>
+              <button class="button" onclick="returnToDashboard()">Return to Dashboard</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Toast Notification -->
+      <div id="toast" class="toast">
+        <div class="toast-icon">✓</div>
+        <div class="toast-message" id="toastMessage">Operation successful!</div>
+        <button class="toast-close" onclick="hideToast()">&times;</button>
+      </div>
+      
+      <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+          apiKey: 'AIzaSyDUuHsCuEu61MsIt5f86b1QmohyazcLdPk',
+          authDomain: 'mindarena-33cab.firebaseapp.com',
+          projectId: 'mindarena-33cab',
+          storageBucket: 'mindarena-33cab.appspot.com',
+          appId: '1:804107625561:web:993f9688437a81db2abd48'
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        
+        // Global variables
+        let currentUser = null;
+        let socket = null;
+        let matchmakingTimer = null;
+        let gameInProgress = false;
+        let gameData = {
+          currentQuestion: 0,
+          totalQuestions: 0,
+          scores: {
+            player: 0,
+            opponent: 0
+          },
+          selectedAnswer: null,
+          correctAnswers: 0,
+          responseTimes: [],
+          streakCount: 0,
+          currentStreak: 0,
+          questionStartTime: 0
+        };
+        
+        // Check if user is logged in, if not redirect to home page
+        firebase.auth().onAuthStateChanged((user) => {
+          if (user) {
+            // User is signed in
+            console.log('Play: User is signed in:', user.displayName || user.email);
+            currentUser = user;
+            updateUserInterface(user);
+            connectWebSocket();
+            updateOnlineUserCount();
+          } else {
+            // No user is signed in, redirect to home
+            console.log('No user is signed in, redirecting to home');
+            window.location.href = '/';
+          }
+        });
+        
+        // Update UI with user info
+        function updateUserInterface(user) {
+          // Show username in greeting
+          const profileName = document.getElementById('profileName');
+          const profileInitial = document.getElementById('profileInitial');
+          const playerName = document.getElementById('playerName');
+          
+          const displayName = user.displayName || user.email || 'Player';
+          profileName.textContent = displayName;
+          playerName.textContent = "You";
+          
+          // Show user initial in avatar
+          if (displayName) {
+            profileInitial.textContent = displayName.charAt(0).toUpperCase();
+          }
+        }
+        
+        // Toggle profile dropdown
+        function toggleProfileDropdown() {
+          const dropdown = document.getElementById('profileDropdown');
+          dropdown.classList.toggle('show');
+          
+          // Close dropdown when clicking outside
+          document.addEventListener('click', function closeDropdown(e) {
+            if (!e.target.closest('.profile-menu')) {
+              dropdown.classList.remove('show');
+              document.removeEventListener('click', closeDropdown);
+            }
+          });
+        }
+        
+        // Handle logout
+        function handleLogout() {
+          if (gameInProgress) {
+            if (!confirm("A game is in progress. Are you sure you want to logout? You'll forfeit the current match.")) {
+              return;
+            }
+          }
+          
+          // Get current user
+          const user = firebase.auth().currentUser;
+          
+          // Send logout message to WebSocket server if connected
+          if (socket && socket.readyState === WebSocket.OPEN && user) {
+            // Send logout message
+            socket.send(JSON.stringify({
+              type: 'logout',
+              userId: user.uid
+            }));
+            
+            // Close the WebSocket connection
+            socket.close();
+          }
+          
+          firebase.auth().signOut()
+            .then(() => {
+              // Sign-out successful, redirect to home
+              window.location.href = '/';
+            })
+            .catch((error) => {
+              // An error happened
+              console.error('Logout error:', error);
+              showToast('error', 'Error during logout. Please try again.');
+            });
+        }
+        
+        // Connect to WebSocket
+        function connectWebSocket() {
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsUrl = `${protocol}//${window.location.host}/ws`;
+          
+          socket = new WebSocket(wsUrl);
+          
+          socket.onopen = function() {
+            console.log('WebSocket connection established');
+            authenticateWebSocket();
+          };
+          
+          socket.onmessage = function(event) {
+            handleWebSocketMessage(event);
+          };
+          
+          socket.onclose = function() {
+            console.log('WebSocket connection closed');
+            // Try to reconnect after a delay
+            setTimeout(connectWebSocket, 3000);
+          };
+          
+          socket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+            showToast('error', 'Connection error. Trying to reconnect...');
+          };
+        }
+        
+        // Authenticate WebSocket
+        function authenticateWebSocket() {
+          if (currentUser && socket && socket.readyState === WebSocket.OPEN) {
+            // Send authentication message
+            socket.send(JSON.stringify({
+              type: 'auth',
+              userId: currentUser.uid,
+              username: currentUser.displayName || currentUser.email || 'User'
+            }));
+          }
+        }
+        
+        // Handle WebSocket messages
+        function handleWebSocketMessage(event) {
+          try {
+            const data = JSON.parse(event.data);
+            console.log('Received WebSocket message:', data);
+            
+            switch (data.type) {
+              case 'online_users':
+                updateOnlineUserCount(data.count);
+                break;
+                
+              case 'matchmaking_status':
+                updateMatchmakingStatus(data.status, data.message);
+                break;
+                
+              case 'match_found':
+                showGamePreparation(data.opponent.username);
+                break;
+                
+              case 'game_start':
+                showGameInterface();
+                break;
+                
+              case 'question':
+                showQuestion(data);
+                break;
+                
+              case 'answer_feedback':
+                showAnswerFeedback(data);
+                break;
+                
+              case 'update_scores':
+                updateScores(data.scores);
+                break;
+                
+              case 'game_end':
+                endGame(data.results);
+                break;
+                
+              case 'game_error':
+                showGameError(data.message);
+                break;
+                
+              default:
+                console.log('Unknown message type:', data.type);
+            }
+          } catch (error) {
+            console.error('Error handling WebSocket message:', error);
+          }
+        }
+        
+        // Update online user count
+        function updateOnlineUserCount(count = null) {
+          const userCountElement = document.getElementById('userCount');
+          
+          if (count !== null) {
+            userCountElement.textContent = count;
+          } else if (socket && socket.readyState === WebSocket.OPEN) {
+            // Request updated count from server
+            socket.send(JSON.stringify({ type: 'get_online_users' }));
+          }
+        }
+        
+        // Start Quick Match
+        function startQuickMatch() {
+          if (!currentUser) {
+            showToast('error', 'You must be logged in to play');
+            return;
+          }
+          
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            // Reset game data
+            resetGame();
+            
+            // Send matchmaking request
+            socket.send(JSON.stringify({ type: 'find_match' }));
+            
+            // Show matchmaking status
+            updateMatchmakingStatus('searching');
+            
+            // Start a timer to periodically refresh matchmaking status
+            matchmakingTimer = setInterval(() => {
+              if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'matchmaking_status' }));
+              }
+            }, 10000); // Check every 10 seconds
+          } else {
+            showToast('error', 'Connection error. Please try again.');
+            connectWebSocket();
+          }
+        }
+        
+        // Cancel matchmaking
+        function cancelMatchmaking() {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: 'cancel_matchmaking' }));
+          }
+          
+          // Clear matchmaking timer
+          if (matchmakingTimer) {
+            clearInterval(matchmakingTimer);
+            matchmakingTimer = null;
+          }
+          
+          // Reset UI
+          updateMatchmakingStatus('idle');
+        }
+        
+        // Update matchmaking status
+        function updateMatchmakingStatus(status, message = '') {
+          const matchmakingStatus = document.getElementById('matchmakingStatus');
+          const findMatchButton = document.getElementById('findMatchButton');
+          
+          switch (status) {
+            case 'searching':
+              matchmakingStatus.style.display = 'block';
+              findMatchButton.disabled = true;
+              break;
+              
+            case 'idle':
+              matchmakingStatus.style.display = 'none';
+              findMatchButton.disabled = false;
+              break;
+              
+            default:
+              if (message) {
+                matchmakingStatus.innerHTML = `
+                  <div class="spinner"></div>
+                  ${message}
+                  <button class="button button-danger" onclick="cancelMatchmaking()" style="margin-top: 16px;">Cancel</button>
+                `;
+                matchmakingStatus.style.display = 'block';
+                findMatchButton.disabled = true;
+              }
+          }
+        }
+        
+        // Show game preparation
+        function showGamePreparation(opponentName) {
+          // Clear matchmaking timer
+          if (matchmakingTimer) {
+            clearInterval(matchmakingTimer);
+            matchmakingTimer = null;
+          }
+          
+          const matchmakingContainer = document.getElementById('matchmakingContainer');
+          const gamePreparation = document.getElementById('gamePreparation');
+          const opponentNameElement = document.getElementById('opponentName');
+          const preparationTimer = document.getElementById('preparationTimer');
+          
+          // Set opponent name
+          opponentNameElement.textContent = opponentName;
+          document.getElementById('opponentNameInGame').textContent = opponentName;
+          
+          // Hide matchmaking, show preparation
+          matchmakingContainer.style.display = 'none';
+          gamePreparation.style.display = 'block';
+          
+          // Start countdown
+          let countdown = 3;
+          preparationTimer.textContent = countdown;
+          
+          const timerInterval = setInterval(() => {
+            countdown--;
+            preparationTimer.textContent = countdown;
+            
+            if (countdown <= 0) {
+              clearInterval(timerInterval);
+            }
+          }, 1000);
+        }
+        
+        // Show game interface
+        function showGameInterface() {
+          gameInProgress = true;
+          
+          const gamePreparation = document.getElementById('gamePreparation');
+          const gameInterface = document.getElementById('gameInterface');
+          
+          gamePreparation.style.display = 'none';
+          gameInterface.style.display = 'block';
+        }
+        
+        // Show question
+        function showQuestion(questionData) {
+          gameData.currentQuestion = questionData.questionNumber;
+          gameData.totalQuestions = questionData.totalQuestions;
+          gameData.selectedAnswer = null;
+          gameData.questionStartTime = Date.now();
+          
+          const questionText = document.getElementById('questionText');
+          const answersGrid = document.getElementById('answersGrid');
+          const questionTimer = document.getElementById('questionTimer');
+          
+          // Set question text
+          questionText.textContent = questionData.question;
+          
+          // Set answer options
+          const answerButtons = answersGrid.querySelectorAll('.answer-option');
+          for (let i = 0; i < answerButtons.length; i++) {
+            const button = answerButtons[i];
+            
+            // Reset button state
+            button.className = 'answer-option';
+            button.disabled = false;
+            
+            if (i < questionData.answers.length) {
+              button.textContent = questionData.answers[i];
+              button.style.display = 'block';
+            } else {
+              button.style.display = 'none';
+            }
+          }
+          
+          // Start timer
+          let timeLeft = questionData.timeLimit || 15;
+          questionTimer.textContent = timeLeft;
+          
+          const timerInterval = setInterval(() => {
+            timeLeft--;
+            questionTimer.textContent = timeLeft;
+            
+            if (timeLeft <= 0 || gameData.selectedAnswer !== null) {
+              clearInterval(timerInterval);
+              
+              if (gameData.selectedAnswer === null) {
+                // Time's up, auto-submit
+                submitAnswer(null);
+              }
+            }
+          }, 1000);
+        }
+        
+        // Select answer
+        function selectAnswer(index) {
+          if (gameData.selectedAnswer !== null) return; // Already selected
+          
+          gameData.selectedAnswer = index;
+          
+          // Highlight selected answer
+          const answerButtons = document.getElementById('answersGrid').querySelectorAll('.answer-option');
+          answerButtons.forEach(button => {
+            button.classList.remove('selected');
+            button.disabled = true;
+          });
+          
+          answerButtons[index].classList.add('selected');
+          
+          // Submit answer to server
+          submitAnswer(index);
+        }
+        
+        // Submit answer
+        function submitAnswer(answerIndex) {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            const responseTime = (Date.now() - gameData.questionStartTime) / 1000;
+            gameData.responseTimes.push(responseTime);
+            
+            socket.send(JSON.stringify({
+              type: 'submit_answer',
+              answer: answerIndex,
+              responseTime: responseTime
+            }));
+          }
+        }
+        
+        // Show answer feedback
+        function showAnswerFeedback(feedback) {
+          const answersGrid = document.getElementById('answersGrid');
+          const answerButtons = answersGrid.querySelectorAll('.answer-option');
+          
+          // Highlight correct answer
+          highlightCorrectAnswer(feedback.correctAnswer);
+          
+          // Update stats
+          if (feedback.isCorrect) {
+            gameData.correctAnswers++;
+            gameData.currentStreak++;
+            
+            if (gameData.currentStreak > gameData.streakCount) {
+              gameData.streakCount = gameData.currentStreak;
+            }
+          } else {
+            gameData.currentStreak = 0;
+          }
+          
+          // Show feedback briefly before moving to next question
+          setTimeout(() => {
+            answerButtons.forEach(button => {
+              button.classList.remove('selected', 'correct', 'incorrect');
+            });
+          }, 1500);
+        }
+        
+        // Highlight correct answer
+        function highlightCorrectAnswer(correctIndex) {
+          const answersGrid = document.getElementById('answersGrid');
+          const answerButtons = answersGrid.querySelectorAll('.answer-option');
+          
+          // Mark correct answer
+          answerButtons[correctIndex].classList.add('correct');
+          
+          // If player selected wrong answer, mark it as incorrect
+          if (gameData.selectedAnswer !== null && gameData.selectedAnswer !== correctIndex) {
+            answerButtons[gameData.selectedAnswer].classList.add('incorrect');
+          }
+        }
+        
+        // Update scores
+        function updateScores(scores) {
+          const playerScore = document.getElementById('playerScore');
+          const opponentScore = document.getElementById('opponentScore');
+          
+          gameData.scores.player = scores.player;
+          gameData.scores.opponent = scores.opponent;
+          
+          playerScore.textContent = scores.player;
+          opponentScore.textContent = scores.opponent;
+        }
+        
+        // End game
+        function endGame(results) {
+          gameInProgress = false;
+          
+          const gameInterface = document.getElementById('gameInterface');
+          const gameResults = document.getElementById('gameResults');
+          
+          const finalPlayerScore = document.getElementById('finalPlayerScore');
+          const finalOpponentScore = document.getElementById('finalOpponentScore');
+          const resultOpponentName = document.getElementById('resultOpponentName');
+          const playerWinnerBadge = document.getElementById('playerWinnerBadge');
+          const opponentWinnerBadge = document.getElementById('opponentWinnerBadge');
+          const tieBadge = document.getElementById('tieBadge');
+          const resultSubtitle = document.getElementById('resultSubtitle');
+          
+          // Set scores
+          finalPlayerScore.textContent = results.scores.player;
+          finalOpponentScore.textContent = results.scores.opponent;
+          resultOpponentName.textContent = results.opponentName;
+          
+          // Set winner
+          if (results.winner === 'player') {
+            playerWinnerBadge.style.display = 'inline-block';
+            opponentWinnerBadge.style.display = 'none';
+            tieBadge.style.display = 'none';
+            resultSubtitle.textContent = 'You won the match!';
+          } else if (results.winner === 'opponent') {
+            playerWinnerBadge.style.display = 'none';
+            opponentWinnerBadge.style.display = 'inline-block';
+            tieBadge.style.display = 'none';
+            resultSubtitle.textContent = 'You lost the match!';
+          } else {
+            playerWinnerBadge.style.display = 'none';
+            opponentWinnerBadge.style.display = 'none';
+            tieBadge.style.display = 'block';
+            resultSubtitle.textContent = 'It's a tie!';
+          }
+          
+          // Set stats
+          document.getElementById('correctAnswers').textContent = gameData.correctAnswers;
+          
+          const avgTime = gameData.responseTimes.length > 0 
+            ? (gameData.responseTimes.reduce((a, b) => a + b, 0) / gameData.responseTimes.length).toFixed(1) 
+            : 0;
+          document.getElementById('avgTime').textContent = avgTime + 's';
+          
+          document.getElementById('streakCount').textContent = gameData.streakCount;
+          
+          // Set rewards
+          document.getElementById('tokensEarned').textContent = results.rewards?.tokens || 0;
+          document.getElementById('xpEarned').textContent = results.rewards?.xp || 0;
+          
+          // Hide game interface, show results
+          gameInterface.style.display = 'none';
+          gameResults.style.display = 'block';
+        }
+        
+        // Play again
+        function playAgain() {
+          const gameResults = document.getElementById('gameResults');
+          const matchmakingContainer = document.getElementById('matchmakingContainer');
+          
+          gameResults.style.display = 'none';
+          matchmakingContainer.style.display = 'block';
+          
+          resetGame();
+          startQuickMatch();
+        }
+        
+        // Return to dashboard
+        function returnToDashboard() {
+          window.location.href = '/dashboard';
+        }
+        
+        // Reset game
+        function resetGame() {
+          gameInProgress = false;
+          gameData = {
+            currentQuestion: 0,
+            totalQuestions: 0,
+            scores: {
+              player: 0,
+              opponent: 0
+            },
+            selectedAnswer: null,
+            correctAnswers: 0,
+            responseTimes: [],
+            streakCount: 0,
+            currentStreak: 0,
+            questionStartTime: 0
+          };
+          
+          // Reset UI elements
+          document.getElementById('playerScore').textContent = '0';
+          document.getElementById('opponentScore').textContent = '0';
+        }
+        
+        // Create private room
+        function createPrivateRoom() {
+          showToast('info', 'Private rooms coming soon!');
+        }
+        
+        // Join private room
+        function joinPrivateRoom() {
+          const roomCode = prompt('Enter the room code:');
+          if (roomCode) {
+            showToast('info', 'Private rooms coming soon!');
+          }
+        }
+        
+        // Show game error
+        function showGameError(message) {
+          cancelMatchmaking();
+          showToast('error', message);
+          
+          // Reset to matchmaking container
+          const gamePreparation = document.getElementById('gamePreparation');
+          const gameInterface = document.getElementById('gameInterface');
+          const gameResults = document.getElementById('gameResults');
+          const matchmakingContainer = document.getElementById('matchmakingContainer');
+          
+          gamePreparation.style.display = 'none';
+          gameInterface.style.display = 'none';
+          gameResults.style.display = 'none';
+          matchmakingContainer.style.display = 'block';
+        }
+        
+        // Show toast notification
+        function showToast(type, message) {
+          const toast = document.getElementById('toast');
+          const toastMessage = document.getElementById('toastMessage');
+          
+          // Set message
+          toastMessage.textContent = message;
+          
+          // Set type
+          toast.className = 'toast';
+          if (type === 'error') {
+            toast.classList.add('toast-error');
+          } else if (type === 'success') {
+            toast.classList.add('toast-success');
+          }
+          
+          // Show toast
+          toast.classList.add('show');
+          
+          // Hide after 3 seconds
+          setTimeout(() => {
+            hideToast();
+          }, 3000);
+        }
+        
+        // Hide toast notification
+        function hideToast() {
+          const toast = document.getElementById('toast');
+          toast.classList.remove('show');
+        }
+      </script>
+    </body>
+    </html>
+  
