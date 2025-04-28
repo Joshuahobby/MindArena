@@ -1,96 +1,81 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:mind_arena/app.dart';
-import 'package:provider/provider.dart';
 
-// Mock services for demonstration
-class MockAnalyticsService {
-  void logScreenView({required String screenName}) {
-    debugPrint('Screen view: $screenName');
-  }
-  
-  void logShareAction({required String contentType, required String shareMethod}) {
-    debugPrint('Share action: $contentType via $shareMethod');
-  }
-  
-  void logAdImpression({required String adType, required String placement}) {
-    debugPrint('Ad impression: $adType at $placement');
-  }
-  
-  void logAdClicked({required String adType, required String placement}) {
-    debugPrint('Ad clicked: $adType at $placement');
-  }
-  
-  void logCoinTransaction({required String transactionType, required int amount, required String reason}) {
-    debugPrint('Coin transaction: $transactionType, $amount coins, reason: $reason');
-  }
-  
-  void logRewardedAdCompleted({required String placement, required String rewardType, required int rewardAmount}) {
-    debugPrint('Rewarded ad completed: $placement, reward: $rewardAmount $rewardType');
+void main() {
+  runApp(const MindArenaApp());
+}
+
+class MindArenaApp extends StatelessWidget {
+  const MindArenaApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'MindArena',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.purple,
+        brightness: Brightness.light,
+      ),
+      home: const HomePage(),
+    );
   }
 }
 
-class MockAuthService {
-  dynamic currentUser;
-  
-  Future<dynamic> getUserData(String userId) async {
-    return null;
-  }
-  
-  Future<void> signOut() async {
-    debugPrint('User signed out');
-  }
-}
+class HomePage extends StatelessWidget {
+  const HomePage({Key? key}) : super(key: key);
 
-class MockDatabaseService {
-  Future<dynamic> getUserData(String userId) async {
-    return null;
-  }
-  
-  Future<List<dynamic>> getLeaderboard({String type = 'global', int limit = 100}) async {
-    return [];
-  }
-}
-
-class MockAdService {
-  bool get isRewardedReady => false;
-  bool get isInterstitialReady => false;
-  bool get isBannerReady => false;
-  Future<bool> showRewardedAd(Function(dynamic) onRewarded) async {
-    return false;
-  }
-  Future<bool> showInterstitial() async {
-    return false;
-  }
-}
-
-void main() async {
-  // Ensure Flutter is initialized
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-
-  runApp(
-    MultiProvider(
-      providers: [
-        Provider<MockAnalyticsService>(
-          create: (_) => MockAnalyticsService(),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('MindArena'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.psychology,
+              size: 80,
+              color: Colors.purple,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Welcome to MindArena!',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'The competitive quiz game for sharp minds',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 40),
+            ElevatedButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Coming soon!'),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+              ),
+              child: const Text(
+                'PLAY NOW',
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
         ),
-        Provider<MockAuthService>(
-          create: (_) => MockAuthService(),
-        ),
-        Provider<MockDatabaseService>(
-          create: (_) => MockDatabaseService(),
-        ),
-        Provider<MockAdService>(
-          create: (_) => MockAdService(),
-        ),
-      ],
-      child: const MindArenaApp(),
-    ),
-  );
+      ),
+    );
+  }
 }

@@ -14,10 +14,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Flutter App Server"
+args = "MindArena App"
 
 [[workflows.workflow]]
-name = "Flutter App Server"
+name = "MindArena App"
 author = "agent"
 
 [[workflows.workflow.tasks]]
