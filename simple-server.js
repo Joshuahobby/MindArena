@@ -5433,6 +5433,73 @@ app.get('/dashboard', (req, res) => {
           margin: 0 auto 30px;
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
+        
+        /* Profile dropdown styles */
+        .profile-menu {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+        .profile-avatar {
+          width: 40px;
+          height: 40px;
+          background-color: #6C5CE7;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .profile-avatar:hover {
+          background-color: #5A49DB;
+          transform: scale(1.05);
+        }
+        .profile-dropdown {
+          position: absolute;
+          top: 50px;
+          right: 0;
+          background-color: #2D3436;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          padding: 10px 0;
+          min-width: 180px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+          display: none;
+          z-index: 100;
+        }
+        .profile-dropdown.show {
+          display: block;
+          animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .dropdown-item {
+          padding: 10px 16px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: white;
+          text-decoration: none;
+          transition: background-color 0.2s ease;
+          cursor: pointer;
+        }
+        .dropdown-item:hover {
+          background-color: rgba(108, 92, 231, 0.2);
+        }
+        .dropdown-item svg {
+          width: 16px;
+          height: 16px;
+          fill: currentColor;
+        }
+        .dropdown-divider {
+          height: 1px;
+          background-color: rgba(255, 255, 255, 0.1);
+          margin: 8px 0;
+        }
       </style>
       <!-- Firebase App (the core Firebase SDK) -->
       <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
