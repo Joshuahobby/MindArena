@@ -5677,8 +5677,18 @@ app.get('/dashboard', (req, res) => {
         
         // Handle logout
         function handleLogout() {
-          // Close WebSocket connection if open
-          if (socket && socket.readyState === WebSocket.OPEN) {
+          // Get current user
+          const user = firebase.auth().currentUser;
+          
+          // Send logout message to WebSocket server if connected
+          if (socket && socket.readyState === WebSocket.OPEN && user) {
+            // Send logout message
+            socket.send(JSON.stringify({
+              type: 'logout',
+              userId: user.uid
+            }));
+            
+            // Close WebSocket connection
             socket.close();
           }
           
