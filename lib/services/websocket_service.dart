@@ -22,6 +22,21 @@ class WebSocketService with ChangeNotifier {
   VoidCallback? onConnected;
   VoidCallback? onDisconnected;
   
+  // Game state
+  String _matchmakingStatus = '';
+  Map<String, dynamic>? _currentGameState;
+  Map<String, dynamic>? _latestQuestion;
+  Map<String, dynamic>? _answerFeedback;
+  Map<String, dynamic>? _scoreUpdate;
+  Map<String, dynamic>? _gameResults;
+  
+  String get matchmakingStatus => _matchmakingStatus;
+  Map<String, dynamic>? get currentGameState => _currentGameState;
+  Map<String, dynamic>? get latestQuestion => _latestQuestion;
+  Map<String, dynamic>? get answerFeedback => _answerFeedback;
+  Map<String, dynamic>? get scoreUpdate => _scoreUpdate;
+  Map<String, dynamic>? get gameResults => _gameResults;
+  
   WebSocketService(this._authService) {
     // Listen for auth changes to connect/disconnect websocket
     _authService.addListener(_handleAuthChange);
@@ -118,6 +133,35 @@ class WebSocketService with ChangeNotifier {
     try {
       final Map<String, dynamic> data = jsonDecode(message);
       
+      if (data.containsKey('type')) {
+        switch (data['type']) {
+          case 'matchmaking_status':
+            _matchmakingStatus = data['status'];
+            notifyListeners();
+            break;
+          case 'game_start':
+            _currentGameState = data;
+            notifyListeners();
+            break;
+          case 'question':
+            _latestQuestion = data;
+            notifyListeners();
+            break;
+          case 'answer_feedback':
+            _answerFeedback = data;
+            notifyListeners();
+            break;
+          case 'score_update':
+            _scoreUpdate = data;
+            notifyListeners();
+            break;
+          case 'game_over':
+            _gameResults = data;
+            notifyListeners();
+            break;
+        }
+      }
+      
       if (onMessage != null) {
         onMessage!(data);
       }
@@ -200,6 +244,40 @@ class WebSocketService with ChangeNotifier {
     }
     
     return '$protocol//$host/ws';
+  }
+  
+  // Game-related methods
+  void startMatchmaking() {
+    send({
+      'type': 'start_matchmaking'
+    });
+    _matchmakingStatus = 'Finding opponent...';
+    notifyListeners();
+  }
+  
+  void cancelMatchmaking() {
+    send({
+      'type': 'cancel_matchmaking'
+    });
+    _matchmakingStatus = '';
+    notifyListeners();
+  }
+  
+  void submitAnswer(int answerIndex) {
+    send({
+      'type': 'submit_answer',
+      'answerIndex': answerIndex
+    });
+  }
+  
+  void clearGameState() {
+    _currentGameState = null;
+    _latestQuestion = null;
+    _answerFeedback = null;
+    _scoreUpdate = null;
+    _gameResults = null;
+    _matchmakingStatus = '';
+    notifyListeners();
   }
   
   @override
