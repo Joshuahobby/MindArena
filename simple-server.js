@@ -612,6 +612,1193 @@ app.get('/register', (req, res) => {
 });
 
 // Tournaments page route
+app.get('/cosmetics', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Cosmetics - MindArena</title>
+      <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+      <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+      <style>
+        /* General styles */
+        body {
+          font-family: system-ui, -apple-system, sans-serif;
+          margin: 0;
+          padding: 0;
+          background: linear-gradient(135deg, #2D3436 0%, #000000 100%);
+          color: white;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+        a {
+          text-decoration: none;
+          color: inherit;
+        }
+        .container {
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+        }
+        .content {
+          flex: 1;
+          padding: 32px;
+          max-width: 1200px;
+          margin: 0 auto;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .button {
+          display: inline-block;
+          background-color: #6C5CE7;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 8px;
+          text-decoration: none;
+          font-weight: bold;
+          transition: all 0.3s ease;
+          border: none;
+          cursor: pointer;
+        }
+        .button:hover {
+          background-color: #5A49DB;
+          transform: translateY(-2px);
+        }
+        .button:disabled {
+          background-color: #6C5CE7;
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .button-secondary {
+          background-color: transparent;
+          border: 1px solid #6C5CE7;
+        }
+        .button-secondary:hover {
+          background-color: rgba(108, 92, 231, 0.1);
+        }
+        .button-success {
+          background-color: #00b894;
+        }
+        .button-success:hover {
+          background-color: #00a584;
+        }
+        
+        /* Nav bar styles */
+        .navbar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 32px;
+          background-color: rgba(0, 0, 0, 0.2);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .logo {
+          font-size: 24px;
+          font-weight: bold;
+          color: white;
+          display: flex;
+          align-items: center;
+        }
+        .logo-icon {
+          width: 36px;
+          height: 36px;
+          background-color: #6C5CE7;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-right: 8px;
+        }
+        .nav-links {
+          display: flex;
+          gap: 16px;
+        }
+        .nav-link {
+          padding: 8px 16px;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+        .nav-link.active {
+          background-color: rgba(108, 92, 231, 0.2);
+          color: #6C5CE7;
+        }
+        .profile-menu {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+        .profile-avatar {
+          width: 40px;
+          height: 40px;
+          background-color: #6C5CE7;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+        }
+        .profile-name {
+          font-weight: bold;
+        }
+        .logout-button {
+          padding: 8px 16px;
+          font-size: 14px;
+        }
+
+        /* Cosmetics page specific styles */
+        .cosmetics-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 32px;
+        }
+        .page-title {
+          margin: 0 0 8px 0;
+          font-size: 32px;
+        }
+        .page-description {
+          color: #B2BEC3;
+          max-width: 600px;
+          line-height: 1.5;
+        }
+        .token-balance {
+          display: flex;
+          align-items: center;
+          margin-bottom: 16px;
+          padding: 16px;
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .token-icon {
+          display: flex;
+          margin-right: 16px;
+        }
+        .token-details {
+          flex: 1;
+        }
+        .token-balance-text {
+          color: #B2BEC3;
+          margin-bottom: 4px;
+        }
+        .token-amount {
+          font-size: 24px;
+          font-weight: bold;
+        }
+        .action-buttons {
+          display: flex;
+          gap: 16px;
+        }
+        
+        /* Profile Preview section */
+        .profile-preview {
+          padding: 32px;
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 16px;
+          margin-bottom: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .profile-preview-title {
+          font-size: 20px;
+          margin: 0 0 24px 0;
+        }
+        .preview-avatar-section {
+          position: relative;
+          width: 200px;
+          height: 200px;
+          margin: 0 auto;
+        }
+        .preview-frame {
+          position: absolute;
+          top: -10px;
+          left: -10px;
+          width: 220px;
+          height: 220px;
+          z-index: 1;
+          background-size: contain;
+          background-position: center;
+          background-repeat: no-repeat;
+        }
+        .preview-avatar {
+          position: relative;
+          width: 200px;
+          height: 200px;
+          border-radius: 50%;
+          overflow: hidden;
+          z-index: 2;
+          background-color: rgba(108, 92, 231, 0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 60px;
+          background-size: cover;
+          background-position: center;
+        }
+        .preview-effect {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          z-index: 3;
+          pointer-events: none;
+          opacity: 0.7;
+          background-size: contain;
+          background-position: center;
+        }
+        .preview-title {
+          margin-top: 16px;
+          text-align: center;
+          font-weight: bold;
+          font-size: 24px;
+          color: #6C5CE7;
+        }
+        
+        /* Cosmetics sections */
+        .cosmetics-nav {
+          display: flex;
+          margin-bottom: 24px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .cosmetics-nav-item {
+          padding: 12px 24px;
+          cursor: pointer;
+          border-bottom: 2px solid transparent;
+          transition: all 0.3s ease;
+        }
+        .cosmetics-nav-item:hover {
+          background-color: rgba(108, 92, 231, 0.1);
+        }
+        .cosmetics-nav-item.active {
+          border-bottom: 2px solid #6C5CE7;
+          color: #6C5CE7;
+        }
+        
+        /* Cosmetics grids */
+        .cosmetics-section {
+          margin-bottom: 32px;
+        }
+        .cosmetics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 16px;
+        }
+        .section-title {
+          font-size: 24px;
+          margin: 0 0 16px 0;
+        }
+        .cosmetic-card {
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 8px;
+          padding: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          transition: all 0.3s ease;
+          position: relative;
+        }
+        .cosmetic-card:hover {
+          transform: translateY(-2px);
+          border-color: rgba(108, 92, 231, 0.5);
+        }
+        .cosmetic-card.equipped {
+          border-color: #6C5CE7;
+          background-color: rgba(108, 92, 231, 0.1);
+        }
+        .cosmetic-card.equipped:after {
+          content: 'Equipped';
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          font-size: 12px;
+          font-weight: bold;
+          color: white;
+          background-color: #6C5CE7;
+          padding: 2px 6px;
+          border-radius: 4px;
+        }
+        .cosmetic-image {
+          width: 80px;
+          height: 80px;
+          margin: 0 auto 16px;
+          border-radius: 8px;
+          background-color: rgba(255, 255, 255, 0.05);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .cosmetic-image img {
+          max-width: 100%;
+          max-height: 100%;
+        }
+        .cosmetic-rarity {
+          position: absolute;
+          top: 8px;
+          left: 8px;
+          font-size: 12px;
+          padding: 2px 6px;
+          border-radius: 4px;
+          text-transform: capitalize;
+        }
+        .rarity-common {
+          background-color: #7f8c8d;
+        }
+        .rarity-uncommon {
+          background-color: #2ecc71;
+        }
+        .rarity-rare {
+          background-color: #3498db;
+        }
+        .rarity-epic {
+          background-color: #9b59b6;
+        }
+        .rarity-legendary {
+          background-color: #f1c40f;
+          color: #2c3e50;
+        }
+        .cosmetic-name {
+          font-weight: bold;
+          margin-bottom: 4px;
+          font-size: 16px;
+        }
+        .cosmetic-description {
+          color: #B2BEC3;
+          font-size: 14px;
+          margin-bottom: 16px;
+          height: 40px;
+          overflow: hidden;
+        }
+        .cosmetic-price {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: bold;
+          margin-bottom: 16px;
+        }
+        .cosmetic-price-icon {
+          width: 16px;
+          height: 16px;
+          fill: #f1c40f;
+        }
+        .cosmetic-actions {
+          display: flex;
+          gap: 8px;
+        }
+        .cosmetic-button {
+          flex: 1;
+          padding: 8px;
+          font-size: 14px;
+        }
+        
+        /* Empty state */
+        .empty-state {
+          text-align: center;
+          padding: 32px;
+        }
+        .empty-state svg {
+          width: 64px;
+          height: 64px;
+          margin-bottom: 16px;
+          fill: #B2BEC3;
+        }
+        .empty-state-title {
+          font-size: 20px;
+          margin-bottom: 8px;
+        }
+        .empty-state-description {
+          color: #B2BEC3;
+          margin-bottom: 24px;
+          max-width: 400px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        
+        /* Toast notification */
+        .toast {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          padding: 16px;
+          background-color: #2D3436;
+          border-left: 4px solid #6C5CE7;
+          border-radius: 4px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          display: flex;
+          align-items: center;
+          min-width: 300px;
+          transform: translateY(100px);
+          opacity: 0;
+          visibility: hidden;
+          transition: all 0.3s ease;
+          z-index: 1000;
+        }
+        .toast.show {
+          transform: translateY(0);
+          opacity: 1;
+          visibility: visible;
+        }
+        .toast-success {
+          border-color: #00b894;
+        }
+        .toast-error {
+          border-color: #d63031;
+        }
+        .toast-icon {
+          margin-right: 12px;
+          width: 24px;
+          height: 24px;
+          background-color: #6C5CE7;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .toast-success .toast-icon {
+          background-color: #00b894;
+        }
+        .toast-error .toast-icon {
+          background-color: #d63031;
+        }
+        .toast-message {
+          flex: 1;
+        }
+        .toast-close {
+          background: none;
+          border: none;
+          color: #B2BEC3;
+          cursor: pointer;
+          font-size: 16px;
+          margin-left: 12px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="navbar">
+          <a href="/" class="logo">
+            <div class="logo-icon">M</div>
+            MindArena
+          </a>
+          
+          <div class="nav-links">
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+            <a href="#" class="nav-link">Play Now</a>
+            <a href="/tournaments" class="nav-link">Tournaments</a>
+            <a href="/battle-pass" class="nav-link">Battle Pass</a>
+            <a href="/cosmetics" class="nav-link active">Cosmetics</a>
+            <a href="#" class="nav-link">Leaderboard</a>
+          </div>
+          
+          <div class="profile-menu">
+            <div class="profile-avatar" id="profileInitial">?</div>
+            <div class="profile-name" id="profileName">...</div>
+            <button class="button logout-button" onclick="handleLogout()">Logout</button>
+          </div>
+        </div>
+        
+        <div class="content">
+          <div class="cosmetics-header">
+            <div>
+              <h1 class="page-title">Cosmetics</h1>
+              <p class="page-description">Customize your profile with unique avatars, frames, and special effects. Unlock cosmetics through the Battle Pass or purchase them with tokens.</p>
+            </div>
+            
+            <div class="token-balance">
+              <div class="token-info">
+                <div class="token-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
+                    <path d="M0 0h24v24H0V0z" fill="none"/>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z"/>
+                  </svg>
+                </div>
+                <div class="token-details">
+                  <div class="token-balance-text">Your Token Balance</div>
+                  <div class="token-amount" id="tokenBalance">0</div>
+                </div>
+              </div>
+              <div class="action-buttons">
+                <button class="button" onclick="addTokens()">Add Tokens</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="profile-preview">
+            <h2 class="profile-preview-title">Your Profile Preview</h2>
+            <div class="preview-avatar-section">
+              <div class="preview-frame" id="previewFrame"></div>
+              <div class="preview-avatar" id="previewAvatar">?</div>
+              <div class="preview-effect" id="previewEffect"></div>
+            </div>
+            <div class="preview-title" id="previewTitle">Novice</div>
+          </div>
+          
+          <div class="cosmetics-nav">
+            <div class="cosmetics-nav-item active" data-tab="avatars">Avatars</div>
+            <div class="cosmetics-nav-item" data-tab="frames">Frames</div>
+            <div class="cosmetics-nav-item" data-tab="effects">Effects</div>
+            <div class="cosmetics-nav-item" data-tab="titles">Titles</div>
+          </div>
+          
+          <div class="cosmetics-section" id="avatarsSection">
+            <h2 class="section-title">Avatars</h2>
+            <div class="cosmetics-grid" id="avatarsGrid">
+              <!-- Avatars will be dynamically inserted here -->
+              <div class="cosmetic-card">
+                <div class="cosmetic-rarity rarity-common">Common</div>
+                <div class="cosmetic-image">
+                  <div style="width: 40px; height: 40px; background-color: #6C5CE7; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">?</div>
+                </div>
+                <div class="cosmetic-name">Loading...</div>
+                <div class="cosmetic-description">Loading cosmetics...</div>
+                <div class="cosmetic-actions">
+                  <button class="button cosmetic-button" disabled>Loading...</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="cosmetics-section" id="framesSection" style="display: none;">
+            <h2 class="section-title">Frames</h2>
+            <div class="cosmetics-grid" id="framesGrid">
+              <!-- Frames will be dynamically inserted here -->
+            </div>
+          </div>
+          
+          <div class="cosmetics-section" id="effectsSection" style="display: none;">
+            <h2 class="section-title">Effects</h2>
+            <div class="cosmetics-grid" id="effectsGrid">
+              <!-- Effects will be dynamically inserted here -->
+            </div>
+          </div>
+          
+          <div class="cosmetics-section" id="titlesSection" style="display: none;">
+            <h2 class="section-title">Titles</h2>
+            <div class="cosmetics-grid" id="titlesGrid">
+              <!-- Titles will be dynamically inserted here -->
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Toast Notification -->
+      <div id="toast" class="toast">
+        <div class="toast-icon">✓</div>
+        <div class="toast-message" id="toastMessage">Operation successful!</div>
+        <button class="toast-close" onclick="hideToast()">&times;</button>
+      </div>
+      
+      <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+          apiKey: '${process.env.VITE_FIREBASE_API_KEY || "demo-api-key"}',
+          authDomain: '${process.env.VITE_FIREBASE_PROJECT_ID || "demo-project"}.firebaseapp.com',
+          projectId: '${process.env.VITE_FIREBASE_PROJECT_ID || "demo-project"}',
+          storageBucket: '${process.env.VITE_FIREBASE_PROJECT_ID || "demo-project"}.appspot.com',
+          appId: '${process.env.VITE_FIREBASE_APP_ID || "demo-app-id"}'
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        
+        // Global variables
+        let currentUser = null;
+        let userCosmetics = null;
+        let availableCosmetics = {
+          avatars: [],
+          frames: [],
+          effects: [],
+          titles: []
+        };
+        
+        // Check if user is logged in, if not redirect to home page
+        firebase.auth().onAuthStateChanged((user) => {
+          if (user) {
+            // User is signed in
+            console.log('Cosmetics: User is signed in:', user.displayName || user.email);
+            currentUser = user;
+            updateUserInterface(user);
+            loadUserTokens(user.uid);
+            loadUserCosmetics(user.uid);
+            loadAvailableCosmetics();
+          } else {
+            // No user is signed in, redirect to home
+            console.log('No user is signed in, redirecting to home');
+            window.location.href = '/';
+          }
+        });
+        
+        // Update UI with user info
+        function updateUserInterface(user) {
+          // Show username in greeting
+          const profileName = document.getElementById('profileName');
+          const profileInitial = document.getElementById('profileInitial');
+          
+          const displayName = user.displayName || user.email || 'Player';
+          profileName.textContent = displayName;
+          
+          // Show user initial in avatar
+          if (displayName) {
+            profileInitial.textContent = displayName.charAt(0).toUpperCase();
+          }
+        }
+        
+        // Handle logout
+        function handleLogout() {
+          firebase.auth().signOut()
+            .then(() => {
+              // Sign-out successful, redirect to home
+              window.location.href = '/';
+            })
+            .catch((error) => {
+              // An error happened
+              console.error('Logout error:', error);
+              showToast('error', 'Error during logout. Please try again.');
+            });
+        }
+        
+        // Load user token balance
+        function loadUserTokens(userId) {
+          fetch('/api/user/' + userId + '/tokens')
+            .then(response => response.json())
+            .then(data => {
+              document.getElementById('tokenBalance').textContent = data.balance;
+            })
+            .catch(error => {
+              console.error('Error fetching token balance:', error);
+            });
+        }
+        
+        // Add tokens to user (demo/testing functionality)
+        function addTokens() {
+          if (!currentUser) return;
+          
+          const amount = prompt('Enter amount of tokens to add:');
+          
+          if (!amount || isNaN(amount) || parseInt(amount) <= 0) {
+            showToast('error', 'Please enter a valid positive number.');
+            return;
+          }
+          
+          fetch('/api/user/' + currentUser.uid + '/tokens/add', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ amount: parseInt(amount) })
+          })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                document.getElementById('tokenBalance').textContent = data.newBalance;
+                showToast('success', 'Successfully added ' + data.added + ' tokens!');
+              } else {
+                showToast('error', data.error || 'Failed to add tokens.');
+              }
+            })
+            .catch(error => {
+              console.error('Error adding tokens:', error);
+              showToast('error', 'Failed to add tokens. Please try again.');
+            });
+        }
+        
+        // Load User Cosmetics
+        function loadUserCosmetics(userId) {
+          fetch('/api/user/' + userId + '/cosmetics')
+            .then(response => response.json())
+            .then(data => {
+              userCosmetics = data;
+              updateProfilePreview();
+            })
+            .catch(error => {
+              console.error('Error fetching user cosmetics:', error);
+              showToast('error', 'Failed to load your cosmetics. Please try again.');
+            });
+        }
+        
+        // Load Available Cosmetics
+        function loadAvailableCosmetics() {
+          // Load avatars
+          fetch('/api/cosmetics/avatars')
+            .then(response => response.json())
+            .then(data => {
+              availableCosmetics.avatars = data.items;
+              renderAvatars();
+            })
+            .catch(error => {
+              console.error('Error fetching avatars:', error);
+            });
+          
+          // Load frames
+          fetch('/api/cosmetics/frames')
+            .then(response => response.json())
+            .then(data => {
+              availableCosmetics.frames = data.items;
+              renderFrames();
+            })
+            .catch(error => {
+              console.error('Error fetching frames:', error);
+            });
+          
+          // Load effects
+          fetch('/api/cosmetics/effects')
+            .then(response => response.json())
+            .then(data => {
+              availableCosmetics.effects = data.items;
+              renderEffects();
+            })
+            .catch(error => {
+              console.error('Error fetching effects:', error);
+            });
+          
+          // Load titles
+          fetch('/api/cosmetics/titles')
+            .then(response => response.json())
+            .then(data => {
+              availableCosmetics.titles = data.items;
+              renderTitles();
+            })
+            .catch(error => {
+              console.error('Error fetching titles:', error);
+            });
+        }
+        
+        // Update Profile Preview
+        function updateProfilePreview() {
+          if (!userCosmetics) return;
+          
+          const previewAvatar = document.getElementById('previewAvatar');
+          const previewFrame = document.getElementById('previewFrame');
+          const previewEffect = document.getElementById('previewEffect');
+          const previewTitle = document.getElementById('previewTitle');
+          
+          // Set avatar
+          if (userCosmetics.equipped.avatar) {
+            // For demo purposes, we'll just use a colored div with the first letter
+            const displayName = currentUser.displayName || currentUser.email || 'User';
+            const initial = displayName.charAt(0).toUpperCase();
+            previewAvatar.textContent = initial;
+            
+            // In a real app, you would set the background image to the avatar's imageUrl
+            // previewAvatar.style.backgroundImage = "url(" + userCosmetics.equipped.avatar.imageUrl + ")";
+            
+            // Add some color based on rarity
+            switch(userCosmetics.equipped.avatar.rarity) {
+              case 'common':
+                previewAvatar.style.backgroundColor = "#7f8c8d"; 
+                break;
+              case 'uncommon':
+                previewAvatar.style.backgroundColor = "#2ecc71"; 
+                break;
+              case 'rare':
+                previewAvatar.style.backgroundColor = "#3498db"; 
+                break;
+              case 'epic':
+                previewAvatar.style.backgroundColor = "#9b59b6"; 
+                break;
+              case 'legendary':
+                previewAvatar.style.backgroundColor = "#f1c40f"; 
+                previewAvatar.style.color = "#2c3e50";
+                break;
+              default:
+                previewAvatar.style.backgroundColor = "#6C5CE7";
+            }
+          }
+          
+          // Set frame
+          if (userCosmetics.equipped.frame) {
+            // For demo purposes, just add a border
+            switch(userCosmetics.equipped.frame.rarity) {
+              case 'common':
+                previewFrame.style.border = "4px solid #7f8c8d"; 
+                break;
+              case 'uncommon':
+                previewFrame.style.border = "4px solid #2ecc71"; 
+                break;
+              case 'rare':
+                previewFrame.style.border = "4px solid #3498db"; 
+                break;
+              case 'epic':
+                previewFrame.style.border = "4px solid #9b59b6"; 
+                break;
+              case 'legendary':
+                previewFrame.style.border = "4px solid #f1c40f"; 
+                break;
+              default:
+                previewFrame.style.border = "4px solid #6C5CE7";
+            }
+            previewFrame.style.borderRadius = "50%";
+            // In a real app, you would set the background image
+            // previewFrame.style.backgroundImage = "url(" + userCosmetics.equipped.frame.imageUrl + ")";
+          }
+          
+          // Set effect (for demo, just add a box shadow)
+          if (userCosmetics.equipped.effect && userCosmetics.equipped.effect.id !== 'default-effect') {
+            switch(userCosmetics.equipped.effect.rarity) {
+              case 'uncommon':
+                previewAvatar.style.boxShadow = "0 0 20px #2ecc71"; 
+                break;
+              case 'rare':
+                previewAvatar.style.boxShadow = "0 0 20px #3498db"; 
+                break;
+              case 'epic':
+                previewAvatar.style.boxShadow = "0 0 20px #9b59b6"; 
+                break;
+              case 'legendary':
+                previewAvatar.style.boxShadow = "0 0 30px #f1c40f"; 
+                break;
+              default:
+                previewAvatar.style.boxShadow = "none";
+            }
+            // In a real app with actual effects
+            // previewEffect.style.backgroundImage = "url(" + userCosmetics.equipped.effect.imageUrl + ")";
+          }
+          
+          // Set title
+          if (userCosmetics.equipped.title) {
+            previewTitle.textContent = userCosmetics.equipped.title.name;
+            
+            // Set color based on rarity
+            switch(userCosmetics.equipped.title.rarity) {
+              case 'common':
+                previewTitle.style.color = "#7f8c8d"; 
+                break;
+              case 'uncommon':
+                previewTitle.style.color = "#2ecc71"; 
+                break;
+              case 'rare':
+                previewTitle.style.color = "#3498db"; 
+                break;
+              case 'epic':
+                previewTitle.style.color = "#9b59b6"; 
+                break;
+              case 'legendary':
+                previewTitle.style.color = "#f1c40f"; 
+                break;
+              default:
+                previewTitle.style.color = "#6C5CE7";
+            }
+          }
+        }
+        
+        // Render Avatars
+        function renderAvatars() {
+          if (!availableCosmetics.avatars.length || !userCosmetics) return;
+          
+          const grid = document.getElementById('avatarsGrid');
+          grid.innerHTML = '';
+          
+          availableCosmetics.avatars.forEach(avatar => {
+            const isUnlocked = userCosmetics.unlocked.avatars.includes(avatar.id);
+            const isEquipped = userCosmetics.equipped.avatar && userCosmetics.equipped.avatar.id === avatar.id;
+            
+            const card = document.createElement('div');
+            card.className = 'cosmetic-card';
+            if (isEquipped) {
+              card.classList.add('equipped');
+            }
+            
+            const purchaseAction = avatar.unlockType === 'tokens' 
+              ? \`<button class="button cosmetic-button button-secondary" onclick="purchaseCosmetic('avatar', '\${avatar.id}')">\${avatar.price} Tokens</button>\` 
+              : '';
+              
+            const equipAction = isUnlocked 
+              ? \`<button class="button cosmetic-button" \${isEquipped ? 'disabled' : ''} onclick="equipCosmetic('avatar', '\${avatar.id}')">\${isEquipped ? 'Equipped' : 'Equip'}</button>\` 
+              : '';
+            
+            card.innerHTML = \`
+              <div class="cosmetic-rarity rarity-\${avatar.rarity}">\${avatar.rarity}</div>
+              <div class="cosmetic-image">
+                <div style="width: 40px; height: 40px; background-color: #6C5CE7; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">A</div>
+              </div>
+              <div class="cosmetic-name">\${avatar.name}</div>
+              <div class="cosmetic-description">\${avatar.description}</div>
+              <div class="cosmetic-actions">
+                \${isUnlocked ? equipAction : purchaseAction}
+              </div>
+            \`;
+            
+            grid.appendChild(card);
+          });
+        }
+        
+        // Render Frames
+        function renderFrames() {
+          if (!availableCosmetics.frames.length || !userCosmetics) return;
+          
+          const grid = document.getElementById('framesGrid');
+          grid.innerHTML = '';
+          
+          availableCosmetics.frames.forEach(frame => {
+            const isUnlocked = userCosmetics.unlocked.frames.includes(frame.id);
+            const isEquipped = userCosmetics.equipped.frame && userCosmetics.equipped.frame.id === frame.id;
+            
+            const card = document.createElement('div');
+            card.className = 'cosmetic-card';
+            if (isEquipped) {
+              card.classList.add('equipped');
+            }
+            
+            const purchaseAction = frame.unlockType === 'tokens' 
+              ? \`<button class="button cosmetic-button button-secondary" onclick="purchaseCosmetic('frame', '\${frame.id}')">\${frame.price} Tokens</button>\` 
+              : '';
+              
+            const equipAction = isUnlocked 
+              ? \`<button class="button cosmetic-button" \${isEquipped ? 'disabled' : ''} onclick="equipCosmetic('frame', '\${frame.id}')">\${isEquipped ? 'Equipped' : 'Equip'}</button>\` 
+              : '';
+            
+            card.innerHTML = \`
+              <div class="cosmetic-rarity rarity-\${frame.rarity}">\${frame.rarity}</div>
+              <div class="cosmetic-image">
+                <div style="width: 60px; height: 60px; border: 3px solid #6C5CE7; border-radius: 50%;"></div>
+              </div>
+              <div class="cosmetic-name">\${frame.name}</div>
+              <div class="cosmetic-description">\${frame.description}</div>
+              <div class="cosmetic-actions">
+                \${isUnlocked ? equipAction : purchaseAction}
+              </div>
+            \`;
+            
+            grid.appendChild(card);
+          });
+        }
+        
+        // Render Effects
+        function renderEffects() {
+          if (!availableCosmetics.effects.length || !userCosmetics) return;
+          
+          const grid = document.getElementById('effectsGrid');
+          grid.innerHTML = '';
+          
+          availableCosmetics.effects.forEach(effect => {
+            const isUnlocked = userCosmetics.unlocked.effects.includes(effect.id);
+            const isEquipped = userCosmetics.equipped.effect && userCosmetics.equipped.effect.id === effect.id;
+            
+            const card = document.createElement('div');
+            card.className = 'cosmetic-card';
+            if (isEquipped) {
+              card.classList.add('equipped');
+            }
+            
+            const purchaseAction = effect.unlockType === 'tokens' 
+              ? \`<button class="button cosmetic-button button-secondary" onclick="purchaseCosmetic('effect', '\${effect.id}')">\${effect.price} Tokens</button>\` 
+              : '';
+              
+            const equipAction = isUnlocked 
+              ? \`<button class="button cosmetic-button" \${isEquipped ? 'disabled' : ''} onclick="equipCosmetic('effect', '\${effect.id}')">\${isEquipped ? 'Equipped' : 'Equip'}</button>\` 
+              : '';
+            
+            // Simulate effect with box shadow
+            const effectStyle = effect.id !== 'default-effect' 
+              ? 'box-shadow: 0 0 15px #6C5CE7; background-color: #6C5CE7;' 
+              : 'background-color: #6C5CE7;';
+            
+            card.innerHTML = \`
+              <div class="cosmetic-rarity rarity-\${effect.rarity}">\${effect.rarity}</div>
+              <div class="cosmetic-image">
+                <div style="width: 40px; height: 40px; border-radius: 50%; \${effectStyle}"></div>
+              </div>
+              <div class="cosmetic-name">\${effect.name}</div>
+              <div class="cosmetic-description">\${effect.description}</div>
+              <div class="cosmetic-actions">
+                \${isUnlocked ? equipAction : purchaseAction}
+              </div>
+            \`;
+            
+            grid.appendChild(card);
+          });
+        }
+        
+        // Render Titles
+        function renderTitles() {
+          if (!availableCosmetics.titles.length || !userCosmetics) return;
+          
+          const grid = document.getElementById('titlesGrid');
+          grid.innerHTML = '';
+          
+          availableCosmetics.titles.forEach(title => {
+            const isUnlocked = userCosmetics.unlocked.titles.includes(title.id);
+            const isEquipped = userCosmetics.equipped.title && userCosmetics.equipped.title.id === title.id;
+            
+            const card = document.createElement('div');
+            card.className = 'cosmetic-card';
+            if (isEquipped) {
+              card.classList.add('equipped');
+            }
+            
+            const purchaseAction = title.unlockType === 'tokens' 
+              ? \`<button class="button cosmetic-button button-secondary" onclick="purchaseCosmetic('title', '\${title.id}')">\${title.price} Tokens</button>\` 
+              : '';
+              
+            const equipAction = isUnlocked 
+              ? \`<button class="button cosmetic-button" \${isEquipped ? 'disabled' : ''} onclick="equipCosmetic('title', '\${title.id}')">\${isEquipped ? 'Equipped' : 'Equip'}</button>\` 
+              : '';
+            
+            // Set color based on rarity
+            let titleColor;
+            switch(title.rarity) {
+              case 'common':
+                titleColor = "#7f8c8d"; 
+                break;
+              case 'uncommon':
+                titleColor = "#2ecc71"; 
+                break;
+              case 'rare':
+                titleColor = "#3498db"; 
+                break;
+              case 'epic':
+                titleColor = "#9b59b6"; 
+                break;
+              case 'legendary':
+                titleColor = "#f1c40f"; 
+                break;
+              default:
+                titleColor = "#6C5CE7";
+            }
+            
+            card.innerHTML = \`
+              <div class="cosmetic-rarity rarity-\${title.rarity}">\${title.rarity}</div>
+              <div class="cosmetic-image">
+                <div style="font-size: 20px; font-weight: bold; color: \${titleColor};">\${title.name}</div>
+              </div>
+              <div class="cosmetic-name">\${title.name}</div>
+              <div class="cosmetic-description">\${title.description}</div>
+              <div class="cosmetic-actions">
+                \${isUnlocked ? equipAction : purchaseAction}
+              </div>
+            \`;
+            
+            grid.appendChild(card);
+          });
+        }
+        
+        // Purchase Cosmetic
+        function purchaseCosmetic(type, itemId) {
+          if (!currentUser) return;
+          
+          fetch('/api/user/' + currentUser.uid + '/cosmetics/purchase', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ type, itemId })
+          })
+            .then(response => {
+              if (!response.ok) {
+                return response.json().then(data => Promise.reject(data));
+              }
+              return response.json();
+            })
+            .then(data => {
+              if (data.success) {
+                showToast('success', data.message);
+                document.getElementById('tokenBalance').textContent = data.newBalance;
+                
+                // Refresh cosmetics
+                loadUserCosmetics(currentUser.uid);
+              } else {
+                showToast('error', data.message || 'Failed to purchase cosmetic.');
+              }
+            })
+            .catch(error => {
+              console.error('Error purchasing cosmetic:', error);
+              showToast('error', error.error || 'Failed to purchase cosmetic. Please try again.');
+            });
+        }
+        
+        // Equip Cosmetic
+        function equipCosmetic(type, itemId) {
+          if (!currentUser) return;
+          
+          fetch('/api/user/' + currentUser.uid + '/cosmetics/equip', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ type, itemId })
+          })
+            .then(response => {
+              if (!response.ok) {
+                return response.json().then(data => Promise.reject(data));
+              }
+              return response.json();
+            })
+            .then(data => {
+              if (data.success) {
+                showToast('success', data.message);
+                
+                // Refresh cosmetics
+                loadUserCosmetics(currentUser.uid);
+              } else {
+                showToast('error', data.message || 'Failed to equip cosmetic.');
+              }
+            })
+            .catch(error => {
+              console.error('Error equipping cosmetic:', error);
+              showToast('error', error.error || 'Failed to equip cosmetic. Please try again.');
+            });
+        }
+        
+        // Tab Navigation
+        document.querySelectorAll('.cosmetics-nav-item').forEach(tab => {
+          tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            document.querySelectorAll('.cosmetics-nav-item').forEach(t => {
+              t.classList.remove('active');
+            });
+            
+            // Add active class to clicked tab
+            tab.classList.add('active');
+            
+            // Hide all sections
+            document.getElementById('avatarsSection').style.display = 'none';
+            document.getElementById('framesSection').style.display = 'none';
+            document.getElementById('effectsSection').style.display = 'none';
+            document.getElementById('titlesSection').style.display = 'none';
+            
+            // Show selected section
+            const tabId = tab.dataset.tab;
+            document.getElementById(tabId + 'Section').style.display = 'block';
+          });
+        });
+        
+        // Show toast notification
+        function showToast(type, message) {
+          const toast = document.getElementById('toast');
+          const toastMessage = document.getElementById('toastMessage');
+          
+          // Set message
+          toastMessage.textContent = message;
+          
+          // Set type
+          toast.className = 'toast';
+          toast.classList.add(\`toast-\${type}\`);
+          
+          // Show toast
+          toast.classList.add('show');
+          
+          // Hide after 3 seconds
+          setTimeout(() => {
+            hideToast();
+          }, 3000);
+        }
+        
+        // Hide toast notification
+        function hideToast() {
+          const toast = document.getElementById('toast');
+          toast.classList.remove('show');
+        }
+      </script>
+    </body>
+    </html>
+  `);
+});
+
 app.get('/battle-pass', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -3550,13 +4737,107 @@ app.post('/api/user/:userId/battle-pass/add-xp', (req, res) => {
   
   const result = addBattlePassXP(userId, parseInt(amount, 10), source || 'manual');
   
+  // Check for cosmetic unlocks from battle pass leveling
+  const newUnlocks = checkBattlePassCosmeticUnlocks(userId);
+  
   res.json({
     success: true,
     levelUp: result.leveledUp,
     oldLevel: result.oldLevel,
     newLevel: result.newLevel,
-    xpAdded: result.xpGained
+    xpAdded: result.xpGained,
+    newUnlocks: newUnlocks.length > 0 ? newUnlocks : undefined
   });
+});
+
+// Cosmetics System Routes
+
+// Get available cosmetics
+app.get('/api/cosmetics/:type', (req, res) => {
+  const { type } = req.params;
+  
+  let items;
+  switch (type) {
+    case 'avatars':
+      items = cosmetics.avatars;
+      break;
+    case 'frames':
+      items = cosmetics.frames;
+      break;
+    case 'effects':
+      items = cosmetics.effects;
+      break;
+    case 'titles':
+      items = cosmetics.titles;
+      break;
+    default:
+      return res.status(400).json({ error: 'Invalid cosmetic type' });
+  }
+  
+  res.json({ items });
+});
+
+// Get user cosmetics
+app.get('/api/user/:userId/cosmetics', (req, res) => {
+  const userId = req.params.userId;
+  const userItems = getUserCosmetics(userId);
+  
+  // Get detailed information about equipped items
+  const equippedAvatar = cosmetics.avatars.find(a => a.id === userItems.equippedAvatar);
+  const equippedFrame = cosmetics.frames.find(f => f.id === userItems.equippedFrame);
+  const equippedEffect = cosmetics.effects.find(e => e.id === userItems.equippedEffect);
+  const equippedTitle = cosmetics.titles.find(t => t.id === userItems.equippedTitle);
+  
+  res.json({
+    unlocked: {
+      avatars: userItems.unlockedAvatars,
+      frames: userItems.unlockedFrames,
+      effects: userItems.unlockedEffects,
+      titles: userItems.unlockedTitles
+    },
+    equipped: {
+      avatar: equippedAvatar,
+      frame: equippedFrame,
+      effect: equippedEffect,
+      title: equippedTitle
+    }
+  });
+});
+
+// Purchase cosmetic
+app.post('/api/user/:userId/cosmetics/purchase', (req, res) => {
+  const userId = req.params.userId;
+  const { type, itemId } = req.body;
+  
+  if (!type || !itemId) {
+    return res.status(400).json({ error: 'Type and itemId are required' });
+  }
+  
+  const result = purchaseCosmetic(userId, type, itemId);
+  
+  if (result.success) {
+    res.json(result);
+  } else {
+    res.status(400).json({ error: result.message });
+  }
+});
+
+// Equip cosmetic
+app.post('/api/user/:userId/cosmetics/equip', (req, res) => {
+  const userId = req.params.userId;
+  const { type, itemId } = req.body;
+  
+  if (!type || !itemId) {
+    return res.status(400).json({ error: 'Type and itemId are required' });
+  }
+  
+  const result = equipCosmetic(userId, type, itemId);
+  
+  if (result.success) {
+    res.json(result);
+  } else {
+    res.status(400).json({ error: result.message });
+  }
 });
 
 // API endpoint to check server health
@@ -4019,6 +5300,540 @@ function claimBattlePassReward(userId, level, isPremium) {
 }
 
 // Continue using userTokens from above
+
+// Cosmetics System for Avatars, Frames, and Effects
+const cosmetics = {
+  avatars: [
+    {
+      id: 'default-avatar',
+      name: 'Default Avatar',
+      description: 'The standard avatar for all players.',
+      rarity: 'common',
+      imageUrl: '/avatars/default.png',
+      unlockType: 'default',
+      unlockRequirement: null,
+      price: 0
+    },
+    {
+      id: 'scholar',
+      name: 'Scholar',
+      description: 'For those who value wisdom and knowledge.',
+      rarity: 'uncommon',
+      imageUrl: '/avatars/scholar.png',
+      unlockType: 'tokens',
+      unlockRequirement: null,
+      price: 200
+    },
+    {
+      id: 'champion',
+      name: 'Champion',
+      description: 'For the winners and the best of the best.',
+      rarity: 'rare',
+      imageUrl: '/avatars/champion.png',
+      unlockType: 'tokens',
+      unlockRequirement: null,
+      price: 500
+    },
+    {
+      id: 'einstein',
+      name: 'Einstein',
+      description: 'The face of genius.',
+      rarity: 'epic',
+      imageUrl: '/avatars/einstein.png',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-20-premium',
+      price: 0
+    },
+    {
+      id: 'quantum-scholar',
+      name: 'Quantum Scholar',
+      description: 'For those who understand the universe at its deepest level.',
+      rarity: 'epic',
+      imageUrl: '/avatars/quantum-scholar.png',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-1-premium',
+      price: 0
+    },
+    {
+      id: 'novice-thinker',
+      name: 'Novice Thinker',
+      description: 'Every expert was once a beginner.',
+      rarity: 'uncommon',
+      imageUrl: '/avatars/novice-thinker.png',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-15-free',
+      price: 0
+    },
+    {
+      id: 'neural-network',
+      name: 'Neural Network',
+      description: 'A digital mind for the digital age.',
+      rarity: 'epic',
+      imageUrl: '/avatars/neural-network.png',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-45-premium',
+      price: 0
+    },
+    {
+      id: 'graduate',
+      name: 'Graduate',
+      description: 'You\'ve earned your degree in quiz mastery.',
+      rarity: 'rare',
+      imageUrl: '/avatars/graduate.png',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-50-free',
+      price: 0
+    },
+    {
+      id: 'tournament-master',
+      name: 'Tournament Master',
+      description: 'For those who dominate the tournament circuit.',
+      rarity: 'legendary',
+      imageUrl: '/avatars/tournament-master.png',
+      unlockType: 'achievement',
+      unlockRequirement: 'win-10-tournaments',
+      price: 0
+    },
+    {
+      id: 'cosmic-brain',
+      name: 'Cosmic Brain',
+      description: 'Your knowledge spans the universe.',
+      rarity: 'legendary',
+      imageUrl: '/avatars/cosmic-brain.png',
+      unlockType: 'tokens',
+      unlockRequirement: null,
+      price: 2000
+    }
+  ],
+  frames: [
+    {
+      id: 'default-frame',
+      name: 'Default Frame',
+      description: 'The standard frame for all players.',
+      rarity: 'common',
+      imageUrl: '/frames/default.png',
+      unlockType: 'default',
+      unlockRequirement: null,
+      price: 0
+    },
+    {
+      id: 'bronze-frame',
+      name: 'Bronze Frame',
+      description: 'A frame for those starting their journey.',
+      rarity: 'uncommon',
+      imageUrl: '/frames/bronze.png',
+      unlockType: 'tokens',
+      unlockRequirement: null,
+      price: 100
+    },
+    {
+      id: 'silver-scholar',
+      name: 'Silver Scholar Frame',
+      description: 'A silvery frame for dedicated learners.',
+      rarity: 'rare',
+      imageUrl: '/frames/silver-scholar.png',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-25-free',
+      price: 0
+    },
+    {
+      id: 'golden-genius',
+      name: 'Golden Genius Frame',
+      description: 'A golden frame fit for a genius.',
+      rarity: 'epic',
+      imageUrl: '/frames/golden-genius.png',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-5-premium',
+      price: 0
+    },
+    {
+      id: 'platinum-genius',
+      name: 'Platinum Genius Frame',
+      description: 'A platinum frame for the elite minds.',
+      rarity: 'epic',
+      imageUrl: '/frames/platinum-genius.png',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-35-premium',
+      price: 0
+    },
+    {
+      id: 'diamond-frame',
+      name: 'Diamond Frame',
+      description: 'A brilliant frame that shines with the light of knowledge.',
+      rarity: 'legendary',
+      imageUrl: '/frames/diamond.png',
+      unlockType: 'tokens',
+      unlockRequirement: null,
+      price: 1500
+    },
+    {
+      id: 'championship-frame',
+      name: 'Championship Frame',
+      description: 'A frame reserved for champions of the MindArena.',
+      rarity: 'legendary',
+      imageUrl: '/frames/championship.png',
+      unlockType: 'achievement',
+      unlockRequirement: 'win-championship',
+      price: 0
+    }
+  ],
+  effects: [
+    {
+      id: 'default-effect',
+      name: 'No Effect',
+      description: 'No special effect.',
+      rarity: 'common',
+      imageUrl: '/effects/none.png',
+      unlockType: 'default',
+      unlockRequirement: null,
+      price: 0
+    },
+    {
+      id: 'sparkle-effect',
+      name: 'Sparkle Effect',
+      description: 'Adds a subtle sparkle to your profile.',
+      rarity: 'uncommon',
+      imageUrl: '/effects/sparkle.png',
+      unlockType: 'tokens',
+      unlockRequirement: null,
+      price: 300
+    },
+    {
+      id: 'flame-effect',
+      name: 'Flame Effect',
+      description: 'Your profile is on fire!',
+      rarity: 'rare',
+      imageUrl: '/effects/flame.png',
+      unlockType: 'tokens',
+      unlockRequirement: null,
+      price: 800
+    },
+    {
+      id: 'knowledge-aura',
+      name: 'Knowledge Aura Effect',
+      description: 'An ethereal aura of wisdom surrounds your profile.',
+      rarity: 'epic',
+      imageUrl: '/effects/knowledge-aura.png',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-50-premium',
+      price: 0
+    },
+    {
+      id: 'galaxy-brain',
+      name: 'Galaxy Brain Effect',
+      description: 'Your mind encompasses the stars and galaxies.',
+      rarity: 'legendary',
+      imageUrl: '/effects/galaxy-brain.png',
+      unlockType: 'tokens',
+      unlockRequirement: null,
+      price: 2500
+    }
+  ],
+  titles: [
+    {
+      id: 'novice',
+      name: 'Novice',
+      description: 'Just beginning the journey.',
+      rarity: 'common',
+      unlockType: 'default',
+      unlockRequirement: null,
+      price: 0
+    },
+    {
+      id: 'quiz-wizard',
+      name: 'Quiz Wizard',
+      description: 'A master of the quizzing arts.',
+      rarity: 'rare',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-40-free',
+      price: 0
+    },
+    {
+      id: 'mastermind',
+      name: 'Mastermind',
+      description: 'A strategic thinker of the highest order.',
+      rarity: 'epic',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-15-premium',
+      price: 0
+    },
+    {
+      id: 'grand-champion',
+      name: 'Grand Champion',
+      description: 'The ultimate title for the ultimate player.',
+      rarity: 'epic',
+      unlockType: 'battlepass',
+      unlockRequirement: 'level-30-premium',
+      price: 0
+    },
+    {
+      id: 'knowledge-keeper',
+      name: 'Knowledge Keeper',
+      description: 'Guardian of wisdom and lore.',
+      rarity: 'rare',
+      unlockType: 'tokens',
+      unlockRequirement: null,
+      price: 400
+    },
+    {
+      id: 'mind-emperor',
+      name: 'Mind Emperor',
+      description: 'Ruler of the realm of knowledge.',
+      rarity: 'legendary',
+      unlockType: 'tokens',
+      unlockRequirement: null,
+      price: 3000
+    }
+  ]
+};
+
+// User cosmetics storage
+const userCosmetics = new Map(); // Maps userId to their unlocked cosmetics
+
+// Function to get or initialize user cosmetics
+function getUserCosmetics(userId) {
+  if (!userCosmetics.has(userId)) {
+    userCosmetics.set(userId, {
+      unlockedAvatars: ['default-avatar'],
+      unlockedFrames: ['default-frame'],
+      unlockedEffects: ['default-effect'],
+      unlockedTitles: ['novice'],
+      equippedAvatar: 'default-avatar',
+      equippedFrame: 'default-frame',
+      equippedEffect: 'default-effect',
+      equippedTitle: 'novice'
+    });
+  }
+  return userCosmetics.get(userId);
+}
+
+// Function to check if a user has unlocked a specific cosmetic
+function hasUnlockedCosmetic(userId, type, itemId) {
+  const userItems = getUserCosmetics(userId);
+  
+  switch (type) {
+    case 'avatar':
+      return userItems.unlockedAvatars.includes(itemId);
+    case 'frame':
+      return userItems.unlockedFrames.includes(itemId);
+    case 'effect':
+      return userItems.unlockedEffects.includes(itemId);
+    case 'title':
+      return userItems.unlockedTitles.includes(itemId);
+    default:
+      return false;
+  }
+}
+
+// Function to unlock a cosmetic for a user
+function unlockCosmetic(userId, type, itemId) {
+  const userItems = getUserCosmetics(userId);
+  let alreadyUnlocked = false;
+  
+  switch (type) {
+    case 'avatar':
+      alreadyUnlocked = userItems.unlockedAvatars.includes(itemId);
+      if (!alreadyUnlocked) {
+        userItems.unlockedAvatars.push(itemId);
+      }
+      break;
+    case 'frame':
+      alreadyUnlocked = userItems.unlockedFrames.includes(itemId);
+      if (!alreadyUnlocked) {
+        userItems.unlockedFrames.push(itemId);
+      }
+      break;
+    case 'effect':
+      alreadyUnlocked = userItems.unlockedEffects.includes(itemId);
+      if (!alreadyUnlocked) {
+        userItems.unlockedEffects.push(itemId);
+      }
+      break;
+    case 'title':
+      alreadyUnlocked = userItems.unlockedTitles.includes(itemId);
+      if (!alreadyUnlocked) {
+        userItems.unlockedTitles.push(itemId);
+      }
+      break;
+    default:
+      return { success: false, message: 'Invalid cosmetic type.' };
+  }
+  
+  if (alreadyUnlocked) {
+    return { success: false, message: 'You already own this item.' };
+  }
+  
+  return { success: true, message: 'Cosmetic unlocked successfully!' };
+}
+
+// Function to equip a cosmetic for a user
+function equipCosmetic(userId, type, itemId) {
+  const userItems = getUserCosmetics(userId);
+  
+  // Check if the user has unlocked this cosmetic
+  if (!hasUnlockedCosmetic(userId, type, itemId)) {
+    return { success: false, message: 'You have not unlocked this item yet.' };
+  }
+  
+  // Equip the cosmetic based on type
+  switch (type) {
+    case 'avatar':
+      userItems.equippedAvatar = itemId;
+      break;
+    case 'frame':
+      userItems.equippedFrame = itemId;
+      break;
+    case 'effect':
+      userItems.equippedEffect = itemId;
+      break;
+    case 'title':
+      userItems.equippedTitle = itemId;
+      break;
+    default:
+      return { success: false, message: 'Invalid cosmetic type.' };
+  }
+  
+  return { 
+    success: true, 
+    message: 'Cosmetic equipped successfully!',
+    equipped: { type, itemId }
+  };
+}
+
+// Function to purchase a cosmetic with tokens
+function purchaseCosmetic(userId, type, itemId) {
+  // Check if user already owns this cosmetic
+  if (hasUnlockedCosmetic(userId, type, itemId)) {
+    return { success: false, message: 'You already own this item.' };
+  }
+  
+  // Get cosmetic details
+  let item;
+  switch (type) {
+    case 'avatar':
+      item = cosmetics.avatars.find(a => a.id === itemId);
+      break;
+    case 'frame':
+      item = cosmetics.frames.find(f => f.id === itemId);
+      break;
+    case 'effect':
+      item = cosmetics.effects.find(e => e.id === itemId);
+      break;
+    case 'title':
+      item = cosmetics.titles.find(t => t.id === itemId);
+      break;
+    default:
+      return { success: false, message: 'Invalid cosmetic type.' };
+  }
+  
+  if (!item) {
+    return { success: false, message: 'Item not found.' };
+  }
+  
+  // Check if item is purchasable with tokens
+  if (item.unlockType !== 'tokens') {
+    return { success: false, message: 'This item cannot be purchased with tokens.' };
+  }
+  
+  // Check if user has enough tokens
+  const userBalance = userTokens.get(userId) || 0;
+  if (userBalance < item.price) {
+    return { 
+      success: false, 
+      message: `Insufficient tokens. Required: ${item.price}, Available: ${userBalance}` 
+    };
+  }
+  
+  // Deduct tokens and unlock the cosmetic
+  userTokens.set(userId, userBalance - item.price);
+  unlockCosmetic(userId, type, itemId);
+  
+  return { 
+    success: true, 
+    message: `Successfully purchased ${item.name}!`,
+    newBalance: userBalance - item.price
+  };
+}
+
+// Function to check for battle pass cosmetic unlocks
+function checkBattlePassCosmeticUnlocks(userId) {
+  const progress = getUserBattlePassProgress(userId);
+  
+  // Check for level-based unlocks
+  let newUnlocks = [];
+  
+  // Check avatars
+  cosmetics.avatars.forEach(avatar => {
+    if (avatar.unlockType === 'battlepass' && !hasUnlockedCosmetic(userId, 'avatar', avatar.id)) {
+      // Parse the unlock requirement (e.g., "level-20-premium")
+      const [type, levelStr, passType] = avatar.unlockRequirement.split('-');
+      const level = parseInt(levelStr, 10);
+      
+      // Check if user meets the requirements
+      if (type === 'level' && progress.level >= level) {
+        if ((passType === 'premium' && progress.isPremium) || (passType === 'free')) {
+          const result = unlockCosmetic(userId, 'avatar', avatar.id);
+          if (result.success) {
+            newUnlocks.push({ type: 'avatar', item: avatar });
+          }
+        }
+      }
+    }
+  });
+  
+  // Check frames
+  cosmetics.frames.forEach(frame => {
+    if (frame.unlockType === 'battlepass' && !hasUnlockedCosmetic(userId, 'frame', frame.id)) {
+      const [type, levelStr, passType] = frame.unlockRequirement.split('-');
+      const level = parseInt(levelStr, 10);
+      
+      if (type === 'level' && progress.level >= level) {
+        if ((passType === 'premium' && progress.isPremium) || (passType === 'free')) {
+          const result = unlockCosmetic(userId, 'frame', frame.id);
+          if (result.success) {
+            newUnlocks.push({ type: 'frame', item: frame });
+          }
+        }
+      }
+    }
+  });
+  
+  // Check effects
+  cosmetics.effects.forEach(effect => {
+    if (effect.unlockType === 'battlepass' && !hasUnlockedCosmetic(userId, 'effect', effect.id)) {
+      const [type, levelStr, passType] = effect.unlockRequirement.split('-');
+      const level = parseInt(levelStr, 10);
+      
+      if (type === 'level' && progress.level >= level) {
+        if ((passType === 'premium' && progress.isPremium) || (passType === 'free')) {
+          const result = unlockCosmetic(userId, 'effect', effect.id);
+          if (result.success) {
+            newUnlocks.push({ type: 'effect', item: effect });
+          }
+        }
+      }
+    }
+  });
+  
+  // Check titles
+  cosmetics.titles.forEach(title => {
+    if (title.unlockType === 'battlepass' && !hasUnlockedCosmetic(userId, 'title', title.id)) {
+      const [type, levelStr, passType] = title.unlockRequirement.split('-');
+      const level = parseInt(levelStr, 10);
+      
+      if (type === 'level' && progress.level >= level) {
+        if ((passType === 'premium' && progress.isPremium) || (passType === 'free')) {
+          const result = unlockCosmetic(userId, 'title', title.id);
+          if (result.success) {
+            newUnlocks.push({ type: 'title', item: title });
+          }
+        }
+      }
+    }
+  });
+  
+  return newUnlocks;
+}
 
 // Tournament registration function
 function registerForTournament(userId, tournamentId) {
