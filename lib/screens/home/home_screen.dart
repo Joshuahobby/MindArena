@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:mind_arena/models/user_model.dart';
 import 'package:mind_arena/theme/app_theme.dart';
-import 'package:mind_arena/screens/home/play_tab.dart';
-import 'package:mind_arena/screens/tournaments/tournaments_tab.dart';
 import 'package:mind_arena/screens/battle_pass/battle_pass_tab.dart';
+import 'package:mind_arena/screens/tournaments/tournaments_tab.dart';
 import 'package:mind_arena/screens/clans/clans_tab.dart';
 import 'package:mind_arena/screens/profile/profile_tab.dart';
-import 'package:mind_arena/services/firebase_service.dart';
-import 'package:mind_arena/models/user_model.dart';
-import 'package:mind_arena/widgets/loading_overlay.dart';
+import 'package:mind_arena/screens/quiz/quiz_tab.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  final User? user;
+
+  const HomeScreen({Key? key, this.user}) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -18,119 +18,81 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  bool _isLoading = true;
-  User? _currentUser;
-  final List<String> _tabTitles = [
-    'Play',
-    'Tournaments',
-    'Battle Pass',
-    'Clans',
-    'Profile',
-  ];
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
+    _pageController = PageController(initialPage: _currentIndex);
   }
 
-  Future<void> _loadUserProfile() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final firebaseService = FirebaseService();
-      final userProfile = await firebaseService.getCurrentUserProfile();
-      
-      setState(() {
-        _currentUser = userProfile;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Error loading user profile: $e');
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Widget _getTabBody() {
-    switch (_currentIndex) {
-      case 0:
-        return PlayTab(user: _currentUser);
-      case 1:
-        return TournamentsTab(user: _currentUser);
-      case 2:
-        return BattlePassTab(user: _currentUser);
-      case 3:
-        return ClansTab(user: _currentUser);
-      case 4:
-        return ProfileTab(user: _currentUser);
-      default:
-        return PlayTab(user: _currentUser);
-    }
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return LoadingOverlay(
-      isLoading: _isLoading,
-      loadingText: 'Loading profile...',
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(_tabTitles[_currentIndex]),
-          backgroundColor: AppTheme.backgroundColor,
-          elevation: 0,
-          actions: [
-            // Coins display
-            if (_currentUser != null && _currentIndex != 4) // Don't show on profile tab
-              Container(
-                margin: const EdgeInsets.only(right: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade800,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.monetization_on, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${_currentUser!.coins}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+    final tabs = [
+      // Quiz/Play Tab
+      QuizTab(user: widget.user),
+      
+      // Battle Pass Tab
+      BattlePassTab(user: widget.user),
+      
+      // Tournaments Tab
+      TournamentsTab(user: widget.user),
+      
+      // Clans Tab
+      ClansTab(user: widget.user),
+      
+      // Profile Tab
+      ProfileTab(user: widget.user),
+    ];
+
+    return Scaffold(
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: tabs,
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
           ],
         ),
-        body: _getTabBody(),
-        bottomNavigationBar: BottomNavigationBar(
+        child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) {
             setState(() {
               _currentIndex = index;
+              _pageController.jumpToPage(index);
             });
           },
           type: BottomNavigationBarType.fixed,
-          backgroundColor: AppTheme.backgroundColor,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
           selectedItemColor: AppTheme.primaryColor,
           unselectedItemColor: AppTheme.secondaryTextColor,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.gamepad),
+              icon: Icon(Icons.videogame_asset),
               label: 'Play',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.card_membership),
+              label: 'Pass',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.emoji_events),
               label: 'Tournaments',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.card_membership),
-              label: 'Battle Pass',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.group),
