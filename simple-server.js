@@ -4633,6 +4633,905 @@ app.post('/api/user/:userId/tokens/add', (req, res) => {
   });
 });
 
+// Cosmetics routes
+app.get('/api/cosmetics/avatars', (req, res) => {
+  // Return available avatars
+  res.json({
+    items: [
+      {
+        id: "default-avatar",
+        name: "Default Avatar",
+        description: "The standard avatar for all players.",
+        rarity: "common",
+        imageUrl: "/avatars/default.png",
+        unlockType: "default",
+        unlockRequirement: null,
+        price: 0
+      },
+      {
+        id: "scholar",
+        name: "Scholar",
+        description: "For those who value wisdom and knowledge.",
+        rarity: "uncommon",
+        imageUrl: "/avatars/scholar.png",
+        unlockType: "tokens",
+        unlockRequirement: null,
+        price: 200
+      },
+      {
+        id: "champion",
+        name: "Champion",
+        description: "For the winners and the best of the best.",
+        rarity: "rare",
+        imageUrl: "/avatars/champion.png",
+        unlockType: "tokens",
+        unlockRequirement: null,
+        price: 500
+      },
+      {
+        id: "einstein",
+        name: "Einstein",
+        description: "The face of genius.",
+        rarity: "epic",
+        imageUrl: "/avatars/einstein.png",
+        unlockType: "battlepass",
+        unlockRequirement: "level-20-premium",
+        price: 0
+      },
+      {
+        id: "quantum-scholar",
+        name: "Quantum Scholar",
+        description: "For those who understand the universe at its deepest level.",
+        rarity: "epic",
+        imageUrl: "/avatars/quantum-scholar.png",
+        unlockType: "battlepass",
+        unlockRequirement: "level-1-premium",
+        price: 0
+      },
+      {
+        id: "novice-thinker",
+        name: "Novice Thinker",
+        description: "Every expert was once a beginner.",
+        rarity: "uncommon",
+        imageUrl: "/avatars/novice-thinker.png",
+        unlockType: "battlepass",
+        unlockRequirement: "level-15-free",
+        price: 0
+      },
+      {
+        id: "neural-network",
+        name: "Neural Network",
+        description: "A digital mind for the digital age.",
+        rarity: "epic",
+        imageUrl: "/avatars/neural-network.png",
+        unlockType: "battlepass",
+        unlockRequirement: "level-45-premium",
+        price: 0
+      },
+      {
+        id: "graduate",
+        name: "Graduate",
+        description: "You've earned your degree in quiz mastery.",
+        rarity: "rare",
+        imageUrl: "/avatars/graduate.png",
+        unlockType: "battlepass",
+        unlockRequirement: "level-50-free",
+        price: 0
+      },
+      {
+        id: "tournament-master",
+        name: "Tournament Master",
+        description: "For those who dominate the tournament circuit.",
+        rarity: "legendary",
+        imageUrl: "/avatars/tournament-master.png",
+        unlockType: "achievement",
+        unlockRequirement: "win-10-tournaments",
+        price: 0
+      },
+      {
+        id: "cosmic-brain",
+        name: "Cosmic Brain",
+        description: "Your knowledge spans the universe.",
+        rarity: "legendary",
+        imageUrl: "/avatars/cosmic-brain.png",
+        unlockType: "tokens",
+        unlockRequirement: null,
+        price: 2000
+      }
+    ]
+  });
+});
+
+app.get('/api/cosmetics/frames', (req, res) => {
+  // Return available frames
+  res.json({
+    items: [
+      {
+        id: "default-frame",
+        name: "Default Frame",
+        description: "A simple frame for your avatar.",
+        rarity: "common",
+        imageUrl: "/frames/default.png",
+        unlockType: "default",
+        unlockRequirement: null,
+        price: 0
+      },
+      {
+        id: "gold-frame",
+        name: "Gold Frame",
+        description: "Show off your wealth and success.",
+        rarity: "rare",
+        imageUrl: "/frames/gold.png",
+        unlockType: "tokens",
+        unlockRequirement: null,
+        price: 450
+      },
+      {
+        id: "neon-frame",
+        name: "Neon Frame",
+        description: "A flashy frame that stands out in the crowd.",
+        rarity: "epic",
+        imageUrl: "/frames/neon.png",
+        unlockType: "tokens",
+        unlockRequirement: null,
+        price: 800
+      },
+      {
+        id: "diamond-frame",
+        name: "Diamond Frame",
+        description: "The most prestigious frame available.",
+        rarity: "legendary",
+        imageUrl: "/frames/diamond.png",
+        unlockType: "battlepass",
+        unlockRequirement: "level-50-premium",
+        price: 0
+      },
+      {
+        id: "platinum-frame",
+        name: "Platinum Frame",
+        description: "For the elite few who have proven their worth.",
+        rarity: "epic",
+        imageUrl: "/frames/platinum.png",
+        unlockType: "battlepass",
+        unlockRequirement: "level-30-premium",
+        price: 0
+      },
+      {
+        id: "silver-frame",
+        name: "Silver Frame",
+        description: "A sleek, professional frame.",
+        rarity: "uncommon",
+        imageUrl: "/frames/silver.png",
+        unlockType: "battlepass",
+        unlockRequirement: "level-10-free",
+        price: 0
+      }
+    ]
+  });
+});
+
+app.get('/api/cosmetics/effects', (req, res) => {
+  // Return available effects
+  res.json({
+    items: [
+      {
+        id: "default-effect",
+        name: "No Effect",
+        description: "No special effects applied.",
+        rarity: "common",
+        imageUrl: "/effects/none.png",
+        unlockType: "default",
+        unlockRequirement: null,
+        price: 0
+      },
+      {
+        id: "glow-effect",
+        name: "Glow Effect",
+        description: "A subtle glow around your avatar.",
+        rarity: "uncommon",
+        imageUrl: "/effects/glow.png",
+        unlockType: "tokens",
+        unlockRequirement: null,
+        price: 300
+      },
+      {
+        id: "sparkle-effect",
+        name: "Sparkle Effect",
+        description: "Tiny sparkles float around your avatar.",
+        rarity: "rare",
+        imageUrl: "/effects/sparkle.png",
+        unlockType: "tokens",
+        unlockRequirement: null,
+        price: 600
+      },
+      {
+        id: "fire-effect",
+        name: "Fire Effect",
+        description: "Your avatar is on fire! (Not literally)",
+        rarity: "epic",
+        imageUrl: "/effects/fire.png",
+        unlockType: "battlepass",
+        unlockRequirement: "level-40-premium",
+        price: 0
+      },
+      {
+        id: "electric-effect",
+        name: "Electric Effect",
+        description: "Lightning crackles around your avatar.",
+        rarity: "legendary",
+        imageUrl: "/effects/electric.png",
+        unlockType: "achievement",
+        unlockRequirement: "perfect-score-5-games",
+        price: 0
+      }
+    ]
+  });
+});
+
+app.get('/api/cosmetics/titles', (req, res) => {
+  // Return available titles
+  res.json({
+    items: [
+      {
+        id: "default-title",
+        name: "Novice",
+        description: "The starting title for all players.",
+        rarity: "common",
+        unlockType: "default",
+        unlockRequirement: null,
+        price: 0
+      },
+      {
+        id: "quiz-master",
+        name: "Quiz Master",
+        description: "A title for those who excel at quizzes.",
+        rarity: "uncommon",
+        unlockType: "tokens",
+        unlockRequirement: null,
+        price: 250
+      },
+      {
+        id: "genius",
+        name: "Genius",
+        description: "For those with exceptional intelligence.",
+        rarity: "rare",
+        unlockType: "tokens",
+        unlockRequirement: null,
+        price: 550
+      },
+      {
+        id: "grandmaster",
+        name: "Grandmaster",
+        description: "The highest title of mastery.",
+        rarity: "epic",
+        unlockType: "battlepass",
+        unlockRequirement: "level-35-premium",
+        price: 0
+      },
+      {
+        id: "doctor-of-knowledge",
+        name: "Doctor of Knowledge",
+        description: "An academic title for the truly dedicated.",
+        rarity: "rare",
+        unlockType: "battlepass",
+        unlockRequirement: "level-25-free",
+        price: 0
+      },
+      {
+        id: "omniscient",
+        name: "The Omniscient",
+        description: "One who knows all there is to know.",
+        rarity: "legendary",
+        unlockType: "achievement",
+        unlockRequirement: "win-100-matches",
+        price: 0
+      }
+    ]
+  });
+});
+
+// User tokens endpoint
+app.get('/api/user/:userId/tokens', (req, res) => {
+  const userId = req.params.userId;
+  // In a real app, you would fetch this from the database
+  const userTokens = getUserTokens(userId);
+  res.json({ balance: userTokens });
+});
+
+// Add tokens endpoint (for testing)
+app.post('/api/user/:userId/tokens/add', (req, res) => {
+  const userId = req.params.userId;
+  const amount = req.body.amount || 100;
+  
+  // Add tokens to user
+  const newBalance = addTokens(userId, amount);
+  
+  res.json({ 
+    success: true, 
+    added: amount,
+    newBalance: newBalance
+  });
+});
+
+// User cosmetics endpoint
+app.get('/api/user/:userId/cosmetics', (req, res) => {
+  const userId = req.params.userId;
+  // Get user's unlocked and equipped cosmetics
+  const userCosmetics = getUserCosmetics(userId);
+  res.json(userCosmetics);
+});
+
+// Purchase cosmetic endpoint
+app.post('/api/user/:userId/cosmetics/purchase', (req, res) => {
+  const userId = req.params.userId;
+  const { type, itemId } = req.body;
+  
+  if (!type || !itemId) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Missing type or itemId in request'
+    });
+  }
+  
+  try {
+    // Check if user already has this cosmetic
+    if (hasUnlockedCosmetic(userId, type, itemId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'You already own this item'
+      });
+    }
+    
+    // Get the cosmetic details
+    let cosmetic;
+    switch(type) {
+      case 'avatar':
+        cosmetic = getCosmetic('avatars', itemId);
+        break;
+      case 'frame':
+        cosmetic = getCosmetic('frames', itemId);
+        break;
+      case 'effect':
+        cosmetic = getCosmetic('effects', itemId);
+        break;
+      case 'title':
+        cosmetic = getCosmetic('titles', itemId);
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid cosmetic type'
+        });
+    }
+    
+    if (!cosmetic) {
+      return res.status(404).json({
+        success: false,
+        error: 'Cosmetic not found'
+      });
+    }
+    
+    // Check if cosmetic is purchasable with tokens
+    if (cosmetic.unlockType !== 'tokens') {
+      return res.status(400).json({
+        success: false,
+        error: 'This item cannot be purchased with tokens'
+      });
+    }
+    
+    // Check if user has enough tokens
+    const userTokens = getUserTokens(userId);
+    if (userTokens < cosmetic.price) {
+      return res.status(400).json({
+        success: false,
+        error: 'Not enough tokens to purchase this item'
+      });
+    }
+    
+    // Purchase the cosmetic
+    const newBalance = addTokens(userId, -cosmetic.price);
+    unlockCosmetic(userId, type, itemId);
+    
+    res.json({
+      success: true,
+      message: `Successfully purchased ${cosmetic.name}!`,
+      newBalance: newBalance
+    });
+  } catch (error) {
+    console.error('Error purchasing cosmetic:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to purchase cosmetic'
+    });
+  }
+});
+
+// Equip cosmetic endpoint
+app.post('/api/user/:userId/cosmetics/equip', (req, res) => {
+  const userId = req.params.userId;
+  const { type, itemId } = req.body;
+  
+  if (!type || !itemId) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Missing type or itemId in request'
+    });
+  }
+  
+  try {
+    // Check if user has unlocked this cosmetic
+    if (!hasUnlockedCosmetic(userId, type, itemId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'You do not own this item'
+      });
+    }
+    
+    // Equip the cosmetic
+    equipCosmetic(userId, type, itemId);
+    
+    res.json({
+      success: true,
+      message: 'Cosmetic equipped successfully!'
+    });
+  } catch (error) {
+    console.error('Error equipping cosmetic:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to equip cosmetic'
+    });
+  }
+});
+
+// Helper function to get a specific cosmetic
+function getCosmetic(type, id) {
+  let items = [];
+  
+  switch(type) {
+    case 'avatars':
+      items = [
+        {
+          id: "default-avatar",
+          name: "Default Avatar",
+          description: "The standard avatar for all players.",
+          rarity: "common",
+          imageUrl: "/avatars/default.png",
+          unlockType: "default",
+          unlockRequirement: null,
+          price: 0
+        },
+        {
+          id: "scholar",
+          name: "Scholar",
+          description: "For those who value wisdom and knowledge.",
+          rarity: "uncommon",
+          imageUrl: "/avatars/scholar.png",
+          unlockType: "tokens",
+          unlockRequirement: null,
+          price: 200
+        },
+        {
+          id: "champion",
+          name: "Champion",
+          description: "For the winners and the best of the best.",
+          rarity: "rare",
+          imageUrl: "/avatars/champion.png",
+          unlockType: "tokens",
+          unlockRequirement: null,
+          price: 500
+        },
+        {
+          id: "einstein",
+          name: "Einstein",
+          description: "The face of genius.",
+          rarity: "epic",
+          imageUrl: "/avatars/einstein.png",
+          unlockType: "battlepass",
+          unlockRequirement: "level-20-premium",
+          price: 0
+        },
+        {
+          id: "quantum-scholar",
+          name: "Quantum Scholar",
+          description: "For those who understand the universe at its deepest level.",
+          rarity: "epic",
+          imageUrl: "/avatars/quantum-scholar.png",
+          unlockType: "battlepass",
+          unlockRequirement: "level-1-premium",
+          price: 0
+        },
+        {
+          id: "novice-thinker",
+          name: "Novice Thinker",
+          description: "Every expert was once a beginner.",
+          rarity: "uncommon",
+          imageUrl: "/avatars/novice-thinker.png",
+          unlockType: "battlepass",
+          unlockRequirement: "level-15-free",
+          price: 0
+        },
+        {
+          id: "neural-network",
+          name: "Neural Network",
+          description: "A digital mind for the digital age.",
+          rarity: "epic",
+          imageUrl: "/avatars/neural-network.png",
+          unlockType: "battlepass",
+          unlockRequirement: "level-45-premium",
+          price: 0
+        },
+        {
+          id: "graduate",
+          name: "Graduate",
+          description: "You've earned your degree in quiz mastery.",
+          rarity: "rare",
+          imageUrl: "/avatars/graduate.png",
+          unlockType: "battlepass",
+          unlockRequirement: "level-50-free",
+          price: 0
+        },
+        {
+          id: "tournament-master",
+          name: "Tournament Master",
+          description: "For those who dominate the tournament circuit.",
+          rarity: "legendary",
+          imageUrl: "/avatars/tournament-master.png",
+          unlockType: "achievement",
+          unlockRequirement: "win-10-tournaments",
+          price: 0
+        },
+        {
+          id: "cosmic-brain",
+          name: "Cosmic Brain",
+          description: "Your knowledge spans the universe.",
+          rarity: "legendary",
+          imageUrl: "/avatars/cosmic-brain.png",
+          unlockType: "tokens",
+          unlockRequirement: null,
+          price: 2000
+        }
+      ];
+      break;
+    case 'frames':
+      items = [
+        {
+          id: "default-frame",
+          name: "Default Frame",
+          description: "A simple frame for your avatar.",
+          rarity: "common",
+          imageUrl: "/frames/default.png",
+          unlockType: "default",
+          unlockRequirement: null,
+          price: 0
+        },
+        {
+          id: "gold-frame",
+          name: "Gold Frame",
+          description: "Show off your wealth and success.",
+          rarity: "rare",
+          imageUrl: "/frames/gold.png",
+          unlockType: "tokens",
+          unlockRequirement: null,
+          price: 450
+        },
+        {
+          id: "neon-frame",
+          name: "Neon Frame",
+          description: "A flashy frame that stands out in the crowd.",
+          rarity: "epic",
+          imageUrl: "/frames/neon.png",
+          unlockType: "tokens",
+          unlockRequirement: null,
+          price: 800
+        },
+        {
+          id: "diamond-frame",
+          name: "Diamond Frame",
+          description: "The most prestigious frame available.",
+          rarity: "legendary",
+          imageUrl: "/frames/diamond.png",
+          unlockType: "battlepass",
+          unlockRequirement: "level-50-premium",
+          price: 0
+        },
+        {
+          id: "platinum-frame",
+          name: "Platinum Frame",
+          description: "For the elite few who have proven their worth.",
+          rarity: "epic",
+          imageUrl: "/frames/platinum.png",
+          unlockType: "battlepass",
+          unlockRequirement: "level-30-premium",
+          price: 0
+        },
+        {
+          id: "silver-frame",
+          name: "Silver Frame",
+          description: "A sleek, professional frame.",
+          rarity: "uncommon",
+          imageUrl: "/frames/silver.png",
+          unlockType: "battlepass",
+          unlockRequirement: "level-10-free",
+          price: 0
+        }
+      ];
+      break;
+    case 'effects':
+      items = [
+        {
+          id: "default-effect",
+          name: "No Effect",
+          description: "No special effects applied.",
+          rarity: "common",
+          imageUrl: "/effects/none.png",
+          unlockType: "default",
+          unlockRequirement: null,
+          price: 0
+        },
+        {
+          id: "glow-effect",
+          name: "Glow Effect",
+          description: "A subtle glow around your avatar.",
+          rarity: "uncommon",
+          imageUrl: "/effects/glow.png",
+          unlockType: "tokens",
+          unlockRequirement: null,
+          price: 300
+        },
+        {
+          id: "sparkle-effect",
+          name: "Sparkle Effect",
+          description: "Tiny sparkles float around your avatar.",
+          rarity: "rare",
+          imageUrl: "/effects/sparkle.png",
+          unlockType: "tokens",
+          unlockRequirement: null,
+          price: 600
+        },
+        {
+          id: "fire-effect",
+          name: "Fire Effect",
+          description: "Your avatar is on fire! (Not literally)",
+          rarity: "epic",
+          imageUrl: "/effects/fire.png",
+          unlockType: "battlepass",
+          unlockRequirement: "level-40-premium",
+          price: 0
+        },
+        {
+          id: "electric-effect",
+          name: "Electric Effect",
+          description: "Lightning crackles around your avatar.",
+          rarity: "legendary",
+          imageUrl: "/effects/electric.png",
+          unlockType: "achievement",
+          unlockRequirement: "perfect-score-5-games",
+          price: 0
+        }
+      ];
+      break;
+    case 'titles':
+      items = [
+        {
+          id: "default-title",
+          name: "Novice",
+          description: "The starting title for all players.",
+          rarity: "common",
+          unlockType: "default",
+          unlockRequirement: null,
+          price: 0
+        },
+        {
+          id: "quiz-master",
+          name: "Quiz Master",
+          description: "A title for those who excel at quizzes.",
+          rarity: "uncommon",
+          unlockType: "tokens",
+          unlockRequirement: null,
+          price: 250
+        },
+        {
+          id: "genius",
+          name: "Genius",
+          description: "For those with exceptional intelligence.",
+          rarity: "rare",
+          unlockType: "tokens",
+          unlockRequirement: null,
+          price: 550
+        },
+        {
+          id: "grandmaster",
+          name: "Grandmaster",
+          description: "The highest title of mastery.",
+          rarity: "epic",
+          unlockType: "battlepass",
+          unlockRequirement: "level-35-premium",
+          price: 0
+        },
+        {
+          id: "doctor-of-knowledge",
+          name: "Doctor of Knowledge",
+          description: "An academic title for the truly dedicated.",
+          rarity: "rare",
+          unlockType: "battlepass",
+          unlockRequirement: "level-25-free",
+          price: 0
+        },
+        {
+          id: "omniscient",
+          name: "The Omniscient",
+          description: "One who knows all there is to know.",
+          rarity: "legendary",
+          unlockType: "achievement",
+          unlockRequirement: "win-100-matches",
+          price: 0
+        }
+      ];
+      break;
+    default:
+      break;
+  }
+  
+  return items.find(item => item.id === id);
+}
+
+// Helper function to get user tokens
+function getUserTokens(userId) {
+  // In a real app, this would be stored in a database
+  // For now, generate a random amount if not already initialized
+  if (!userTokensMap.has(userId)) {
+    userTokensMap.set(userId, 1000); // Start with 1000 tokens
+  }
+  
+  return userTokensMap.get(userId);
+}
+
+// Helper function to add or remove tokens
+function addTokens(userId, amount) {
+  const currentBalance = getUserTokens(userId);
+  const newBalance = Math.max(0, currentBalance + amount);
+  userTokensMap.set(userId, newBalance);
+  return newBalance;
+}
+
+// In-memory storage for cosmetics
+const userCosmeticsMap = new Map();
+const userTokensMap = new Map();
+
+// Initialize cosmetics for a new user
+function initializeUserCosmetics(userId) {
+  return {
+    unlocked: {
+      avatars: ["default-avatar"],
+      frames: ["default-frame"],
+      effects: ["default-effect"],
+      titles: ["default-title"]
+    },
+    equipped: {
+      avatar: {
+        id: "default-avatar",
+        name: "Default Avatar",
+        description: "The standard avatar for all players.",
+        rarity: "common",
+        imageUrl: "/avatars/default.png"
+      },
+      frame: {
+        id: "default-frame",
+        name: "Default Frame",
+        description: "A simple frame for your avatar.",
+        rarity: "common",
+        imageUrl: "/frames/default.png"
+      },
+      effect: {
+        id: "default-effect",
+        name: "No Effect",
+        description: "No special effects applied.",
+        rarity: "common",
+        imageUrl: "/effects/none.png"
+      },
+      title: {
+        id: "default-title",
+        name: "Novice",
+        description: "The starting title for all players.",
+        rarity: "common"
+      }
+    }
+  };
+}
+
+// Get user cosmetics
+function getUserCosmetics(userId) {
+  if (!userCosmeticsMap.has(userId)) {
+    userCosmeticsMap.set(userId, initializeUserCosmetics(userId));
+  }
+  
+  return userCosmeticsMap.get(userId);
+}
+
+// Check if user has unlocked a specific cosmetic
+function hasUnlockedCosmetic(userId, type, itemId) {
+  const userCosmetics = getUserCosmetics(userId);
+  
+  switch(type) {
+    case 'avatar':
+      return userCosmetics.unlocked.avatars.includes(itemId);
+    case 'frame':
+      return userCosmetics.unlocked.frames.includes(itemId);
+    case 'effect':
+      return userCosmetics.unlocked.effects.includes(itemId);
+    case 'title':
+      return userCosmetics.unlocked.titles.includes(itemId);
+    default:
+      return false;
+  }
+}
+
+// Unlock a cosmetic for a user
+function unlockCosmetic(userId, type, itemId) {
+  const userCosmetics = getUserCosmetics(userId);
+  
+  switch(type) {
+    case 'avatar':
+      if (!userCosmetics.unlocked.avatars.includes(itemId)) {
+        userCosmetics.unlocked.avatars.push(itemId);
+      }
+      break;
+    case 'frame':
+      if (!userCosmetics.unlocked.frames.includes(itemId)) {
+        userCosmetics.unlocked.frames.push(itemId);
+      }
+      break;
+    case 'effect':
+      if (!userCosmetics.unlocked.effects.includes(itemId)) {
+        userCosmetics.unlocked.effects.push(itemId);
+      }
+      break;
+    case 'title':
+      if (!userCosmetics.unlocked.titles.includes(itemId)) {
+        userCosmetics.unlocked.titles.push(itemId);
+      }
+      break;
+  }
+  
+  userCosmeticsMap.set(userId, userCosmetics);
+  return userCosmetics;
+}
+
+// Equip a cosmetic for a user
+function equipCosmetic(userId, type, itemId) {
+  const userCosmetics = getUserCosmetics(userId);
+  
+  // Check if user has the cosmetic unlocked
+  if (!hasUnlockedCosmetic(userId, type, itemId)) {
+    throw new Error('User does not have this cosmetic unlocked');
+  }
+  
+  // Get the cosmetic details
+  const cosmetic = getCosmetic(type + 's', itemId);
+  if (!cosmetic) {
+    throw new Error('Cosmetic not found');
+  }
+  
+  // Equip the cosmetic based on its type
+  switch(type) {
+    case 'avatar':
+      userCosmetics.equipped.avatar = cosmetic;
+      break;
+    case 'frame':
+      userCosmetics.equipped.frame = cosmetic;
+      break;
+    case 'effect':
+      userCosmetics.equipped.effect = cosmetic;
+      break;
+    case 'title':
+      userCosmetics.equipped.title = cosmetic;
+      break;
+  }
+  
+  userCosmeticsMap.set(userId, userCosmetics);
+  return userCosmetics;
+}
+
 // Battle Pass routes
 app.get('/api/battle-pass', (req, res) => {
   // Return current battle pass season info
