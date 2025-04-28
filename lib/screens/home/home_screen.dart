@@ -3,6 +3,10 @@ import 'package:mind_arena/models/user_model.dart';
 import 'package:mind_arena/screens/auth/login_screen.dart';
 import 'package:mind_arena/services/auth_service.dart';
 import 'package:mind_arena/utils/app_constants.dart';
+import 'package:mind_arena/screens/home/play_screen.dart';
+import 'package:mind_arena/screens/store/store_screen.dart';
+import 'package:mind_arena/screens/battle_pass/battle_pass_screen.dart';
+import 'package:mind_arena/screens/profile/profile_screen.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,12 +19,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   
-  final List<Widget> _pages = [
-    const PlayScreen(),
-    const StoreScreen(),
-    const BattlePassScreen(),
-    const ProfileScreen(),
-  ];
+  late final List<Widget> _pages;
+  
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const PlayScreen(),
+      const StoreScreen(),
+      const BattlePassScreen(),
+      const ProfileScreen(),
+    ];
+  }
   
   void _onItemTapped(int index) {
     setState(() {
@@ -148,8 +158,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class PlayScreen extends StatelessWidget {
-  const PlayScreen({Key? key}) : super(key: key);
+class HomePlayScreen extends StatelessWidget {
+  const HomePlayScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
