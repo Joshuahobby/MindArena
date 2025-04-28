@@ -23,6 +23,45 @@ const activeGames = new Map();
 // Store online user count
 let onlineUserCount = 0;
 
+// Handle user logout
+function handleLogout(userId) {
+  if (!userId) return;
+  
+  // Find and update client connections for this user
+  for (const [ws, clientInfo] of clients.entries()) {
+    if (clientInfo.userId === userId) {
+      // Update client status
+      clientInfo.isAuthenticated = false;
+      clientInfo.userId = null;
+      clientInfo.username = null;
+      
+      // Remove from matchmaking if applicable
+      if (clientInfo.inMatchmaking) {
+        const index = matchmakingQueue.findIndex(entry => entry.userId === userId);
+        if (index !== -1) {
+          matchmakingQueue.splice(index, 1);
+        }
+        clientInfo.inMatchmaking = false;
+      }
+      
+      // Handle game disconnection if applicable
+      if (clientInfo.inGame && clientInfo.gameId) {
+        handlePlayerDisconnect(clientInfo, clientInfo.gameId);
+        clientInfo.inGame = false;
+        clientInfo.gameId = null;
+      }
+      
+      // Send logout confirmation to client
+      ws.send(JSON.stringify({
+        type: 'logout_success'
+      }));
+    }
+  }
+  
+  // Update online user count
+  updateOnlineUserCount();
+}
+
 // WebSocket connection handler
 wss.on('connection', (ws) => {
   console.log('WebSocket client connected');
@@ -121,6 +160,11 @@ function handleClientMessage(ws, message) {
     case 'submit_answer':
       // Handle answer submission
       handleAnswerSubmission(ws, clientInfo, message);
+      break;
+      
+    case 'logout':
+      // Handle user logout
+      handleLogout(clientInfo.userId);
       break;
       
     default:

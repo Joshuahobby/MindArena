@@ -142,7 +142,6 @@ class _MindArenaAppState extends State<MindArenaApp> {
     );
   }
 }
-}
 
 class _LoadingScreen extends StatelessWidget {
   const _LoadingScreen({Key? key}) : super(key: key);
@@ -216,11 +215,31 @@ class _LoadingScreen extends StatelessWidget {
   }
 }
 
+class AuthenticationWrapper extends StatelessWidget {
+  const AuthenticationWrapper({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+    final User? currentUser = authService.currentUser;
+
+    // Show login screen if not authenticated
+    if (currentUser == null) {
+      return const LoginScreen();
+    }
+
+    // Direct to appropriate dashboard based on role
+    return currentUser.role == UserRole.admin
+        ? const AdminDashboardScreen()
+        : const HomeScreen();
+  }
+}
+
 class AppState extends ChangeNotifier {
-  app_models.User? currentUser;
+  User? currentUser;
   bool isDarkMode = true;
   
-  void setUser(app_models.User? user) {
+  void setUser(User? user) {
     currentUser = user;
     notifyListeners();
   }
