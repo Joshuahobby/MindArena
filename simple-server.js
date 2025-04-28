@@ -1146,7 +1146,7 @@ app.get('/tournaments', (req, res) => {
           <a href="/dashboard" class="nav-link">Dashboard</a>
           <a href="#" class="nav-link">Play Now</a>
           <a href="/tournaments" class="nav-link active">Tournaments</a>
-          <a href="#" class="nav-link">Battle Pass</a>
+          <a href="/battle-pass" class="nav-link">Battle Pass</a>
           <a href="#" class="nav-link">Leaderboard</a>
         </div>
         
@@ -1926,7 +1926,7 @@ app.get('/dashboard', (req, res) => {
           <a href="/dashboard" class="nav-link active">Dashboard</a>
           <a href="#" class="nav-link">Play Now</a>
           <a href="/tournaments" class="nav-link">Tournaments</a>
-          <a href="#" class="nav-link">Battle Pass</a>
+          <a href="/battle-pass" class="nav-link">Battle Pass</a>
           <a href="#" class="nav-link">Leaderboard</a>
         </div>
         
@@ -2325,6 +2325,119 @@ app.post('/api/user/:userId/tokens/add', (req, res) => {
   });
 });
 
+// Battle Pass routes
+app.get('/api/battle-pass', (req, res) => {
+  // Return current battle pass season info
+  res.json({ 
+    currentSeason: {
+      id: battlePass.currentSeason.id,
+      name: battlePass.currentSeason.name,
+      description: battlePass.currentSeason.description,
+      startDate: battlePass.currentSeason.startDate,
+      endDate: battlePass.currentSeason.endDate,
+      premiumPrice: battlePass.currentSeason.premiumPrice,
+      maxLevel: battlePass.currentSeason.maxLevel,
+      xpPerLevel: battlePass.currentSeason.xpPerLevel
+    }
+  });
+});
+
+app.get('/api/battle-pass/rewards', (req, res) => {
+  // Return battle pass rewards
+  res.json({ rewards: battlePass.currentSeason.rewards });
+});
+
+app.get('/api/user/:userId/battle-pass', (req, res) => {
+  const userId = req.params.userId;
+  const progress = getUserBattlePassProgress(userId);
+  
+  // Calculate percentage to next level
+  const percentToNextLevel = Math.min(
+    Math.floor((progress.xp / battlePass.currentSeason.xpPerLevel) * 100),
+    100
+  );
+  
+  // Get available rewards
+  const rewards = battlePass.currentSeason.rewards.map(reward => {
+    const freeRewardId = `${reward.level}-free`;
+    const premiumRewardId = `${reward.level}-premium`;
+    
+    return {
+      level: reward.level,
+      free: {
+        ...reward.free,
+        claimed: progress.claimedRewards.includes(freeRewardId),
+        available: progress.level >= reward.level
+      },
+      premium: {
+        ...reward.premium,
+        claimed: progress.claimedRewards.includes(premiumRewardId),
+        available: progress.isPremium && progress.level >= reward.level
+      }
+    };
+  });
+  
+  res.json({
+    progress: {
+      level: progress.level,
+      xp: progress.xp,
+      xpToNextLevel: battlePass.currentSeason.xpPerLevel - progress.xp,
+      percentToNextLevel,
+      isPremium: progress.isPremium
+    },
+    rewards
+  });
+});
+
+app.post('/api/user/:userId/battle-pass/upgrade', (req, res) => {
+  const userId = req.params.userId;
+  
+  const result = upgradeToPremiumBattlePass(userId);
+  
+  if (result.success) {
+    res.json(result);
+  } else {
+    res.status(400).json({ error: result.message });
+  }
+});
+
+app.post('/api/user/:userId/battle-pass/claim-reward', (req, res) => {
+  const userId = req.params.userId;
+  const { level, isPremium } = req.body;
+  
+  if (level === undefined || isPremium === undefined) {
+    return res.status(400).json({ error: 'Level and isPremium are required' });
+  }
+  
+  const result = claimBattlePassReward(userId, level, isPremium);
+  
+  if (result.success) {
+    res.json(result);
+  } else {
+    res.status(400).json({ error: result.message });
+  }
+});
+
+// Simulate adding XP (for demo purposes)
+app.post('/api/user/:userId/battle-pass/add-xp', (req, res) => {
+  const userId = req.params.userId;
+  const { amount, source } = req.body;
+  
+  if (!amount || isNaN(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'Valid amount required' });
+  }
+  
+  const result = addBattlePassXP(userId, parseInt(amount, 10), source || 'manual');
+  
+  res.json({
+    success: true,
+    levelUp: result.leveledUp,
+    oldLevel: result.oldLevel,
+    newLevel: result.newLevel,
+    xpAdded: result.xpGained
+  });
+});
+
 // API endpoint to check server health
 app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', version: '1.0.0' });
@@ -2581,8 +2694,210 @@ const tournaments = [
   }
 ];
 
-// User token balances (in a real app, this would be in a database)
+// User data storage (in a real app, this would be in a database)
 const userTokens = new Map();
+
+// Battle Pass System
+const battlePass = {
+  currentSeason: {
+    id: 'season-1',
+    name: 'Season 1: Mind Mastery',
+    description: 'Begin your journey through the realms of knowledge and earn exclusive rewards.',
+    startDate: new Date('2025-04-01').toISOString(),
+    endDate: new Date('2025-04-30').toISOString(),
+    isPremium: false, // Free battle pass by default
+    premiumPrice: 500, // Tokens to upgrade to premium
+    maxLevel: 50,
+    xpPerLevel: 1000, // XP needed to level up
+    rewards: [
+      // Free rewards
+      {
+        level: 1,
+        free: { type: 'tokens', amount: 50, name: '50 Tokens' },
+        premium: { type: 'avatar', id: 'quantum-scholar', name: 'Quantum Scholar Avatar' }
+      },
+      {
+        level: 5,
+        free: { type: 'tokens', amount: 100, name: '100 Tokens' },
+        premium: { type: 'profile_frame', id: 'golden-genius', name: 'Golden Genius Frame' }
+      },
+      {
+        level: 10,
+        free: { type: 'tokens', amount: 150, name: '150 Tokens' },
+        premium: { type: 'tokens', amount: 300, name: '300 Tokens' }
+      },
+      {
+        level: 15,
+        free: { type: 'avatar', id: 'novice-thinker', name: 'Novice Thinker Avatar' },
+        premium: { type: 'title', id: 'mastermind', name: 'Mastermind Title' }
+      },
+      {
+        level: 20,
+        free: { type: 'tokens', amount: 200, name: '200 Tokens' },
+        premium: { type: 'avatar', id: 'einstein', name: 'Einstein Avatar' }
+      },
+      {
+        level: 25,
+        free: { type: 'profile_frame', id: 'silver-scholar', name: 'Silver Scholar Frame' },
+        premium: { type: 'tokens', amount: 500, name: '500 Tokens' }
+      },
+      {
+        level: 30,
+        free: { type: 'tokens', amount: 250, name: '250 Tokens' },
+        premium: { type: 'title', id: 'grand-champion', name: 'Grand Champion Title' }
+      },
+      {
+        level: 35,
+        free: { type: 'tokens', amount: 300, name: '300 Tokens' },
+        premium: { type: 'profile_frame', id: 'platinum-genius', name: 'Platinum Genius Frame' }
+      },
+      {
+        level: 40,
+        free: { type: 'title', id: 'quiz-wizard', name: 'Quiz Wizard Title' },
+        premium: { type: 'tokens', amount: 750, name: '750 Tokens' }
+      },
+      {
+        level: 45,
+        free: { type: 'tokens', amount: 350, name: '350 Tokens' },
+        premium: { type: 'avatar', id: 'neural-network', name: 'Neural Network Avatar' }
+      },
+      {
+        level: 50,
+        free: { type: 'avatar', id: 'graduate', name: 'Graduate Avatar' },
+        premium: { type: 'special_effect', id: 'knowledge-aura', name: 'Knowledge Aura Effect' }
+      }
+    ],
+    xpSources: {
+      matchWin: 100,
+      matchParticipation: 50,
+      correctAnswer: 10,
+      dailyLogin: 50,
+      tournamentParticipation: 200,
+      tournamentWin: 500
+    }
+  },
+  // User battle pass progress
+  userProgress: new Map() // Maps userId to their battle pass progress
+};
+
+// Function to get or initialize user battle pass progress
+function getUserBattlePassProgress(userId) {
+  if (!battlePass.userProgress.has(userId)) {
+    battlePass.userProgress.set(userId, {
+      level: 1,
+      xp: 0,
+      isPremium: false,
+      claimedRewards: []
+    });
+  }
+  return battlePass.userProgress.get(userId);
+}
+
+// Function to add XP to user's battle pass
+function addBattlePassXP(userId, xpAmount, source) {
+  const progress = getUserBattlePassProgress(userId);
+  const oldLevel = progress.level;
+  
+  // Add XP
+  progress.xp += xpAmount;
+  
+  // Check for level ups
+  while (progress.xp >= battlePass.currentSeason.xpPerLevel && progress.level < battlePass.currentSeason.maxLevel) {
+    progress.xp -= battlePass.currentSeason.xpPerLevel;
+    progress.level++;
+  }
+  
+  // Cap XP at max if needed
+  if (progress.level >= battlePass.currentSeason.maxLevel) {
+    progress.level = battlePass.currentSeason.maxLevel;
+    progress.xp = Math.min(progress.xp, battlePass.currentSeason.xpPerLevel - 1);
+  }
+  
+  // Return level up info
+  return {
+    oldLevel,
+    newLevel: progress.level,
+    leveledUp: progress.level > oldLevel,
+    xpGained: xpAmount,
+    source: source
+  };
+}
+
+// Function to upgrade to premium battle pass
+function upgradeToPremiumBattlePass(userId) {
+  const progress = getUserBattlePassProgress(userId);
+  const userBalance = userTokens.get(userId) || 0;
+  
+  if (progress.isPremium) {
+    return { success: false, message: 'User already has premium battle pass' };
+  }
+  
+  if (userBalance < battlePass.currentSeason.premiumPrice) {
+    return { 
+      success: false, 
+      message: `Insufficient tokens. Required: ${battlePass.currentSeason.premiumPrice}, Available: ${userBalance}` 
+    };
+  }
+  
+  // Deduct tokens and upgrade
+  userTokens.set(userId, userBalance - battlePass.currentSeason.premiumPrice);
+  progress.isPremium = true;
+  
+  return { 
+    success: true, 
+    message: 'Successfully upgraded to premium battle pass',
+    newBalance: userBalance - battlePass.currentSeason.premiumPrice
+  };
+}
+
+// Function to claim battle pass reward
+function claimBattlePassReward(userId, level, isPremium) {
+  const progress = getUserBattlePassProgress(userId);
+  
+  // Check if eligible to claim
+  if (progress.level < level) {
+    return { success: false, message: `You haven't reached level ${level} yet` };
+  }
+  
+  // Check if premium reward but user doesn't have premium pass
+  if (isPremium && !progress.isPremium) {
+    return { success: false, message: 'This is a premium reward. Upgrade to premium to claim it.' };
+  }
+  
+  // Check if already claimed
+  const rewardId = `${level}-${isPremium ? 'premium' : 'free'}`;
+  if (progress.claimedRewards.includes(rewardId)) {
+    return { success: false, message: 'You have already claimed this reward' };
+  }
+  
+  // Find the reward
+  const rewardLevel = battlePass.currentSeason.rewards.find(r => r.level === level);
+  if (!rewardLevel) {
+    return { success: false, message: 'Reward not found' };
+  }
+  
+  const reward = isPremium ? rewardLevel.premium : rewardLevel.free;
+  
+  // Process reward
+  let rewardResult = { received: reward.name };
+  
+  if (reward.type === 'tokens') {
+    const currentBalance = userTokens.get(userId) || 0;
+    userTokens.set(userId, currentBalance + reward.amount);
+    rewardResult.newBalance = currentBalance + reward.amount;
+  }
+  
+  // Mark as claimed
+  progress.claimedRewards.push(rewardId);
+  
+  return { 
+    success: true, 
+    message: `Successfully claimed ${reward.name}`,
+    reward: rewardResult
+  };
+}
+
+// Continue using userTokens from above
 
 // Tournament registration function
 function registerForTournament(userId, tournamentId) {
