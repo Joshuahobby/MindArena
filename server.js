@@ -452,31 +452,38 @@ app.get('/', (req, res) => {
           clearFormError('loginForm');
           clearFormError('registerForm');
           
-          const googleProvider = new firebase.auth.GoogleAuthProvider();
-          
-          firebase.auth().signInWithPopup(googleProvider)
-            .then((result) => {
-              // This gives you a Google Access Token
-              const credential = result.credential;
-              const token = credential.accessToken;
-              // The signed-in user info
-              const user = result.user;
-              
-              console.log('Successfully signed in with Google:', user.displayName);
-              showSuccess('Welcome ' + user.displayName + '! Successfully signed in with Google!');
-              
-              // Close both modals
-              closeModal('loginModal');
-              closeModal('registerModal');
-            })
-            .catch((error) => {
-              // Handle Errors here
-              const errorCode = error.code;
-              const errorMessage = error.message;
-              console.error('Google Sign-In error:', errorCode, errorMessage);
-              
-              showFormError('loginForm', 'Failed to sign in with Google: ' + errorMessage);
-            });
+          try {
+            const googleProvider = new firebase.auth.GoogleAuthProvider();
+            
+            showFormError('loginForm', 'To enable Google Sign-in, please add your Replit domain to Firebase authorized domains list in the Firebase Console under Authentication → Settings → Authorized domains');
+            
+            firebase.auth().signInWithPopup(googleProvider)
+              .then((result) => {
+                // This gives you a Google Access Token
+                const credential = result.credential;
+                const token = credential.accessToken;
+                // The signed-in user info
+                const user = result.user;
+                
+                console.log('Successfully signed in with Google:', user.displayName);
+                showSuccess('Welcome ' + user.displayName + '! Successfully signed in with Google!');
+                
+                // Close both modals
+                closeModal('loginModal');
+                closeModal('registerModal');
+              })
+              .catch((error) => {
+                // Handle Errors here
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                console.error('Google Sign-In error:', errorCode, errorMessage);
+                
+                if (errorCode === 'auth/configuration-not-found') {
+                  showFormError('loginForm', 'Please add your Replit domain to Firebase authorized domains list in the Firebase Console under Authentication → Settings → Authorized domains');
+                } else {
+                  showFormError('loginForm', 'Failed to sign in with Google: ' + errorMessage);
+                }
+              });
         }
         
         // Handle login form submission
@@ -498,6 +505,9 @@ app.get('/', (req, res) => {
               showFormError('loginForm', 'Please enter your password.');
               return;
             }
+            
+            // Show the required steps to make authentication work
+            showFormError('loginForm', 'To enable login, please add your Replit domain to Firebase authorized domains list in the Firebase Console under Authentication → Settings → Authorized domains');
             
             // Get the login button
             const loginButton = document.querySelector('#loginForm button[type="button"]');
@@ -582,6 +592,9 @@ app.get('/', (req, res) => {
               showFormError('registerForm', 'Passwords do not match. Please try again.');
               return;
             }
+            
+            // Show the required steps to make authentication work
+            showFormError('registerForm', 'To enable registration, please add your Replit domain to Firebase authorized domains list in the Firebase Console under Authentication → Settings → Authorized domains');
             
             // Get the register button
             const registerButton = document.querySelector('#registerForm button[type="button"]');
