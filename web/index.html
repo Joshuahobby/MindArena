@@ -21,19 +21,117 @@
 
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
+  
+  <!-- Main app script - preload it -->
+  <script src="main.dart.js" type="application/javascript" defer></script>
+  
+  <style>
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+    }
+    .loader {
+      border: 16px solid #f3f3f3;
+      border-radius: 50%;
+      border-top: 16px solid #3498db;
+      width: 120px;
+      height: 120px;
+      -webkit-animation: spin 2s linear infinite;
+      animation: spin 2s linear infinite;
+    }
+    @-webkit-keyframes spin {
+      0% { -webkit-transform: rotate(0deg); }
+      100% { -webkit-transform: rotate(360deg); }
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    #status-message {
+      margin-top: 20px;
+      font-family: Arial, sans-serif;
+    }
+  </style>
 </head>
 <body>
+  <div id="loading" class="loading">
+    <div>
+      <div class="loader"></div>
+      <div id="status-message">Loading MindArena app...</div>
+    </div>
+  </div>
+  
+  <!-- This is where Flutter will render -->
+  <div id="flutter_target" style="width: 100%; height: 100%;"></div>
+
   <script>
+    console.log("Starting MindArena initialization");
+    
+    function updateStatus(message) {
+      console.log(message);
+      const statusElement = document.getElementById('status-message');
+      if (statusElement) {
+        statusElement.textContent = message;
+      }
+    }
+    
     window.addEventListener('load', function(ev) {
-      // Download main.dart.js
-      _flutter.loader.load({
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
+      updateStatus("Page loaded, initializing Flutter app...");
+      
+      try {
+        _flutter = window.flutter_web_plugins || window._flutter || {};
+        updateStatus("Flutter detected, loading app...");
+        
+        // Download main.dart.js
+        window.flutterConfiguration = {
+          canvasKitBaseUrl: "/canvaskit/"
+        };
+        
+        try {
+          _flutter.loader.load({
+            targetEl: document.getElementById('flutter_target'),
+            onEntrypointLoaded: function(engineInitializer) {
+              updateStatus("Engine initializer loaded, creating engine...");
+              engineInitializer.initializeEngine({
+                hostElement: document.getElementById('flutter_target')
+              }).then(function(appRunner) {
+                updateStatus("Engine initialized, running app...");
+                try {
+                  appRunner.runApp();
+                  updateStatus("App started successfully");
+                } catch (runError) {
+                  updateStatus("Error running app: " + runError.message);
+                  console.error("Run error:", runError);
+                }
+              }).catch(function(error) {
+                updateStatus("Engine initialization error: " + error.message);
+                console.error("Engine error:", error);
+              });
+            }
           });
+        } catch (loaderError) {
+          updateStatus("Loader error: " + loaderError.message);
+          console.error("Loader error:", loaderError);
         }
-      });
+      } catch (error) {
+        updateStatus("Fatal error: " + error.message);
+        console.error("Fatal error:", error);
+      }
     });
+    
+    window.onerror = function(message, source, lineno, colno, error) {
+      updateStatus("JavaScript error: " + message);
+      console.error("JS error:", message, source, lineno, colno, error);
+      return false;
+    };
   </script>
 </body>
 </html>

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:developer' as developer;
 
 void main() {
+  developer.log('MindArena starting...');
   runApp(const MindArenaApp());
 }
 
@@ -9,72 +11,65 @@ class MindArenaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    developer.log('Building MindArenaApp');
     return MaterialApp(
       title: 'MindArena',
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: true,
       theme: ThemeData(
-        primarySwatch: Colors.purple,
-        brightness: Brightness.light,
+        primarySwatch: Colors.blue,
       ),
-      home: const HomePage(),
+      home: const MyHomePage(),
     );
   }
 }
 
-class HomePage extends StatelessWidget {
-  const HomePage({Key? key}) : super(key: key);
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({Key? key}) : super(key: key);
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  int _counter = 0;
+
+  void _incrementCounter() {
+    developer.log('Incrementing counter');
+    setState(() {
+      _counter++;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    developer.log('Building MyHomePage');
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MindArena'),
+        title: const Text('MindArena Demo'),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.psychology,
-              size: 80,
-              color: Colors.purple,
-            ),
-            const SizedBox(height: 24),
+          children: <Widget>[
             const Text(
               'Welcome to MindArena!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             const Text(
-              'The competitive quiz game for sharp minds',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-              textAlign: TextAlign.center,
+              'You have pushed the button this many times:',
             ),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Coming soon!'),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-              ),
-              child: const Text(
-                'PLAY NOW',
-                style: TextStyle(fontSize: 18),
-              ),
+            Text(
+              '$_counter',
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _incrementCounter,
+        tooltip: 'Increment',
+        child: const Icon(Icons.add),
       ),
     );
   }
