@@ -38,6 +38,20 @@ const commonJsForHead = `
       }, 10);
     }
   }
+  
+  // Auto-fix for profile avatar click handlers
+  document.addEventListener('DOMContentLoaded', function() {
+    const profileAvatar = document.getElementById('profileInitial');
+    if (profileAvatar) {
+      // Remove the inline onclick attribute to prevent multiple handlers
+      profileAvatar.removeAttribute('onclick');
+      
+      // Add a proper event listener that handles the event correctly
+      profileAvatar.addEventListener('click', function(event) {
+        toggleProfileDropdown(event);
+      });
+    }
+  });
 </script>
 `;
 
@@ -5309,6 +5323,7 @@ app.get('/dashboard', (req, res) => {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Dashboard - MindArena</title>
+      ${commonJsForHead}
       <style>
         body {
           font-family: system-ui, -apple-system, sans-serif;
