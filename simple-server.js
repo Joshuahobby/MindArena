@@ -4226,7 +4226,7 @@ app.get('/tournaments', (req, res) => {
         
         <div class="nav-links">
           <a href="/dashboard" class="nav-link">Dashboard</a>
-          <a href="#" class="nav-link">Play Now</a>
+          <a href="/play" class="nav-link">Play Now</a>
           <a href="/tournaments" class="nav-link active">Tournaments</a>
           <a href="/battle-pass" class="nav-link">Battle Pass</a>
           <a href="#" class="nav-link">Leaderboard</a>
@@ -5006,7 +5006,7 @@ app.get('/dashboard', (req, res) => {
         
         <div class="nav-links">
           <a href="/dashboard" class="nav-link active">Dashboard</a>
-          <a href="#" class="nav-link">Play Now</a>
+          <a href="/play" class="nav-link">Play Now</a>
           <a href="/tournaments" class="nav-link">Tournaments</a>
           <a href="/battle-pass" class="nav-link">Battle Pass</a>
           <a href="#" class="nav-link">Leaderboard</a>
@@ -5029,7 +5029,7 @@ app.get('/dashboard', (req, res) => {
                 <span id="tokenBalance">0</span>
                 <button class="button button-small" onclick="addTokens()">+</button>
               </div>
-              <button class="button" id="playButton" onclick="startQuickMatch()">Play Quick Match</button>
+              <a href="/play" class="button" id="playButton">Play Quick Match</a>
             </div>
           </div>
           
