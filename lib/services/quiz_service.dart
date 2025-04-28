@@ -1,481 +1,465 @@
-import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:mind_arena/models/question_model.dart';
-import 'package:mind_arena/models/game_session_model.dart';
-import 'package:mind_arena/services/database_service.dart';
-import 'package:mind_arena/services/mock_database_service.dart';
-import 'package:mind_arena/services/database_service_factory.dart';
+import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mind_arena/models/quiz_model.dart';
 import 'dart:developer' as developer;
 
 class QuizService {
-  final dynamic _databaseService;
-  static final QuizService _instance = QuizService._internal(DatabaseServiceFactory.getDatabaseService());
-  
-  factory QuizService() {
-    return _instance;
-  }
-  
-  QuizService._internal(this._databaseService);
-  
+  static final QuizService _instance = QuizService._internal();
+  factory QuizService() => _instance;
+  QuizService._internal();
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Mock questions for development and testing
+  final List<Question> _mockQuestions = [
+    Question(
+      id: '1',
+      text: 'What is the capital of France?',
+      answers: ['Paris', 'London', 'Berlin', 'Madrid'],
+      correctAnswerIndex: 0,
+      category: 'geography',
+      difficulty: 'easy',
+    ),
+    Question(
+      id: '2',
+      text: 'Which planet is known as the Red Planet?',
+      answers: ['Earth', 'Mars', 'Jupiter', 'Venus'],
+      correctAnswerIndex: 1,
+      category: 'science',
+      difficulty: 'easy',
+    ),
+    Question(
+      id: '3',
+      text: 'Who painted the Mona Lisa?',
+      answers: ['Michelangelo', 'Vincent van Gogh', 'Leonardo da Vinci', 'Pablo Picasso'],
+      correctAnswerIndex: 2,
+      category: 'history',
+      difficulty: 'easy',
+    ),
+    Question(
+      id: '4',
+      text: 'What is the chemical symbol for gold?',
+      answers: ['Go', 'Gd', 'Au', 'Ag'],
+      correctAnswerIndex: 2,
+      category: 'science',
+      difficulty: 'medium',
+    ),
+    Question(
+      id: '5',
+      text: 'In which year did World War II end?',
+      answers: ['1943', '1945', '1947', '1950'],
+      correctAnswerIndex: 1,
+      category: 'history',
+      difficulty: 'medium',
+    ),
+    Question(
+      id: '6',
+      text: 'What is the largest ocean on Earth?',
+      answers: ['Atlantic Ocean', 'Indian Ocean', 'Arctic Ocean', 'Pacific Ocean'],
+      correctAnswerIndex: 3,
+      category: 'geography',
+      difficulty: 'medium',
+    ),
+    Question(
+      id: '7',
+      text: 'Who wrote "Romeo and Juliet"?',
+      answers: ['Charles Dickens', 'William Shakespeare', 'Jane Austen', 'F. Scott Fitzgerald'],
+      correctAnswerIndex: 1,
+      category: 'entertainment',
+      difficulty: 'easy',
+    ),
+    Question(
+      id: '8',
+      text: 'What is the tallest mountain in the world?',
+      answers: ['K2', 'Mount Kilimanjaro', 'Mount Everest', 'Makalu'],
+      correctAnswerIndex: 2,
+      category: 'geography',
+      difficulty: 'easy',
+    ),
+    Question(
+      id: '9',
+      text: 'What is the chemical formula for water?',
+      answers: ['H2O', 'CO2', 'NaCl', 'O2'],
+      correctAnswerIndex: 0,
+      category: 'science',
+      difficulty: 'easy',
+    ),
+    Question(
+      id: '10',
+      text: 'Which sport uses a shuttlecock?',
+      answers: ['Tennis', 'Basketball', 'Badminton', 'Golf'],
+      correctAnswerIndex: 2,
+      category: 'sports',
+      difficulty: 'medium',
+    ),
+  ];
+
+  // Mock categories for development and testing
+  final List<QuizCategory> _mockCategories = [
+    QuizCategory(
+      id: 'general',
+      name: 'General Knowledge',
+      description: 'Questions about a wide range of topics.',
+      iconName: 'lightbulb',
+    ),
+    QuizCategory(
+      id: 'science',
+      name: 'Science',
+      description: 'Questions about physics, chemistry, biology, and more.',
+      iconName: 'science',
+    ),
+    QuizCategory(
+      id: 'history',
+      name: 'History',
+      description: 'Questions about historical events, figures, and periods.',
+      iconName: 'history_edu',
+    ),
+    QuizCategory(
+      id: 'geography',
+      name: 'Geography',
+      description: 'Questions about countries, capitals, landmarks, and more.',
+      iconName: 'public',
+    ),
+    QuizCategory(
+      id: 'entertainment',
+      name: 'Entertainment',
+      description: 'Questions about movies, music, books, and more.',
+      iconName: 'movie',
+    ),
+    QuizCategory(
+      id: 'sports',
+      name: 'Sports',
+      description: 'Questions about various sports and athletes.',
+      iconName: 'sports_soccer',
+    ),
+  ];
+
+  // Initialize service
   Future<void> initialize() async {
-    if (kIsWeb) {
-      // For web platform, we skip database initialization
-      developer.log('Web platform detected, using mock data');
-    } else {
-      // For native platforms, initialize the database connection
-      await _databaseService.initialize();
-      developer.log('Database initialized for native platform');
-    }
+    // In a real application, you might want to fetch some initial data here
+    developer.log('QuizService initialized');
   }
-  
-  // Category-related methods
-  Future<List<QuestionCategory>> getCategories() async {
+
+  // Get quiz categories
+  Future<List<QuizCategory>> getCategories() async {
     try {
       if (kIsWeb) {
-        // Simplified mock categories for web platform
-        // Return hardcoded categories to avoid database connection issues in web
-        developer.log('Returning mock categories for web platform');
-        return [
-          QuestionCategory(
-            id: 1,
-            name: 'Science',
-            description: 'Questions about various scientific fields',
-          ),
-          QuestionCategory(
-            id: 2,
-            name: 'History',
-            description: 'Questions about historical events and figures',
-          ),
-          QuestionCategory(
-            id: 3,
-            name: 'Geography',
-            description: 'Questions about places around the world',
-          ),
-          QuestionCategory(
-            id: 4,
-            name: 'Entertainment',
-            description: 'Questions about movies, TV, music and celebrities',
-          ),
-          QuestionCategory(
-            id: 5,
-            name: 'Sports',
-            description: 'Questions about various sports and athletes',
-          ),
-        ];
+        // For web, return mock categories
+        return _mockCategories;
       } else {
-        // Traditional PostgreSQL implementation for native platforms
-        final connection = _databaseService.connection;
-        if (connection == null) {
-          throw Exception('Database connection not initialized');
-        }
-    
-        final results = await connection.query('SELECT * FROM categories ORDER BY name');
-        
-        return results
-          .map((row) => QuestionCategory.fromMap(row.toColumnMap()))
-          .toList();
+        // For mobile, fetch from Firestore
+        final QuerySnapshot snapshot = await _firestore.collection('categories').get();
+        return snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return QuizCategory.fromJson(data);
+        }).toList();
       }
     } catch (e) {
-      developer.log('Error fetching categories: $e');
+      developer.log('Error getting categories: $e');
+      // Fallback to mock categories if there's an error
+      return _mockCategories;
+    }
+  }
+
+  // Get questions
+  Future<List<Question>> getQuestions({
+    int count = 10,
+    String? category,
+    String? difficulty,
+  }) async {
+    try {
+      if (kIsWeb) {
+        // For web, filter the mock questions
+        List<Question> filteredQuestions = List.from(_mockQuestions);
+        
+        if (category != null) {
+          filteredQuestions = filteredQuestions.where((q) => q.category == category).toList();
+        }
+        
+        if (difficulty != null) {
+          filteredQuestions = filteredQuestions.where((q) => q.difficulty == difficulty).toList();
+        }
+        
+        // Shuffle and limit to requested count
+        filteredQuestions.shuffle();
+        return filteredQuestions.take(count).toList();
+      } else {
+        // For mobile, fetch from Firestore with query
+        Query query = _firestore.collection('questions');
+        
+        if (category != null) {
+          query = query.where('category', isEqualTo: category);
+        }
+        
+        if (difficulty != null) {
+          query = query.where('difficulty', isEqualTo: difficulty);
+        }
+        
+        final QuerySnapshot snapshot = await query.limit(count).get();
+        
+        // If not enough questions with the filters, get more questions without filters
+        if (snapshot.docs.length < count) {
+          final int remaining = count - snapshot.docs.length;
+          final QuerySnapshot additionalSnapshot = await _firestore
+              .collection('questions')
+              .limit(remaining)
+              .get();
+          
+          final List<Question> questions = [
+            ...snapshot.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              data['id'] = doc.id;
+              return Question.fromJson(data);
+            }),
+            ...additionalSnapshot.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              data['id'] = doc.id;
+              return Question.fromJson(data);
+            }),
+          ];
+          
+          return questions;
+        } else {
+          return snapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id;
+            return Question.fromJson(data);
+          }).toList();
+        }
+      }
+    } catch (e) {
+      developer.log('Error getting questions: $e');
+      // Fallback to mock questions if there's an error
+      List<Question> filteredQuestions = List.from(_mockQuestions);
+      filteredQuestions.shuffle();
+      return filteredQuestions.take(count).toList();
+    }
+  }
+
+  // Save quiz result
+  Future<QuizResult> saveQuizResult(QuizResult result) async {
+    try {
+      if (!kIsWeb) {
+        // For mobile, save to Firestore
+        final DocumentReference docRef = await _firestore.collection('quiz_results').add(result.toJson());
+        return result;
+      } else {
+        // For web, just return the result (no saving)
+        return result;
+      }
+    } catch (e) {
+      developer.log('Error saving quiz result: $e');
+      return result;
+    }
+  }
+
+  // Get user quiz history
+  Future<List<QuizResult>> getUserQuizHistory(String userId) async {
+    try {
+      if (!kIsWeb) {
+        // For mobile, fetch from Firestore
+        final QuerySnapshot snapshot = await _firestore
+            .collection('quiz_results')
+            .where('user_id', isEqualTo: userId)
+            .orderBy('timestamp', descending: true)
+            .get();
+        
+        return snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return QuizResult.fromJson(data);
+        }).toList();
+      } else {
+        // For web, return empty list (no history)
+        return [];
+      }
+    } catch (e) {
+      developer.log('Error getting user quiz history: $e');
       return [];
     }
   }
-  
-  Future<QuestionCategory> createCategory(QuestionCategory category) async {
+
+  // Get leaderboard
+  Future<List<Map<String, dynamic>>> getLeaderboard({
+    String? category,
+    String? timeframe = 'all', // 'daily', 'weekly', 'monthly', 'all'
+  }) async {
     try {
-      final connection = _databaseService.connection;
-      if (connection == null) {
-        throw Exception('Database connection not initialized');
-      }
-      
-      final results = await connection.query(
-        'INSERT INTO categories (name, description, icon_url) VALUES (@name, @description, @iconUrl) RETURNING *',
-        substitutionValues: {
-          'name': category.name,
-          'description': category.description,
-          'iconUrl': category.iconUrl,
-        },
-      );
-      
-      return QuestionCategory.fromMap(results.first.toColumnMap());
-    } catch (e) {
-      print('Error creating category: $e');
-      rethrow;
-    }
-  }
-  
-  // Question-related methods
-  Future<Question> createQuestion(Question question) async {
-    try {
-      final connection = _databaseService.connection;
-      if (connection == null) {
-        throw Exception('Database connection not initialized');
-      }
-      
-      final questionResults = await connection.query(
-        'INSERT INTO questions (category_id, question_text, difficulty) VALUES (@categoryId, @questionText, @difficulty) RETURNING *',
-        substitutionValues: {
-          'categoryId': question.categoryId,
-          'questionText': question.questionText,
-          'difficulty': question.difficulty,
-        },
-      );
-      
-      final newQuestion = Question.fromMap(questionResults.first.toColumnMap());
-      
-      // Insert answers
-      for (final answer in question.answers) {
-        await connection.query(
-          'INSERT INTO answers (question_id, answer_text, is_correct) VALUES (@questionId, @answerText, @isCorrect)',
-          substitutionValues: {
-            'questionId': newQuestion.id,
-            'answerText': answer.answerText,
-            'isCorrect': answer.isCorrect,
-          },
-        );
-      }
-      
-      // Fetch the complete question with answers
-      return await getQuestionById(newQuestion.id!);
-    } catch (e) {
-      print('Error creating question: $e');
-      rethrow;
-    }
-  }
-  
-  Future<Question> getQuestionById(int questionId) async {
-    try {
-      final connection = _databaseService.connection;
-      if (connection == null) {
-        throw Exception('Database connection not initialized');
-      }
-      
-      final questionResults = await connection.query(
-        '''
-        SELECT q.*, c.name as category_name 
-        FROM questions q
-        LEFT JOIN categories c ON q.category_id = c.id
-        WHERE q.id = @questionId
-        ''',
-        substitutionValues: {'questionId': questionId},
-      );
-      
-      if (questionResults.isEmpty) {
-        throw Exception('Question not found');
-      }
-      
-      final question = questionResults.first.toColumnMap();
-      
-      // Get answers for this question
-      final answerResults = await connection.query(
-        'SELECT * FROM answers WHERE question_id = @questionId',
-        substitutionValues: {'questionId': questionId},
-      );
-      
-      List<Map<String, dynamic>> answers = answerResults.map((row) => row.toColumnMap()).toList();
-      question['answers'] = answers;
-      
-      return Question.fromMap(question);
-    } catch (e) {
-      print('Error fetching question: $e');
-      rethrow;
-    }
-  }
-  
-  // Game Session methods
-  Future<GameSession> createGameSession({bool isTournament = false, int entryFee = 0}) async {
-    try {
-      return GameSession.fromMap(await _databaseService.createGameSession(isTournament, entryFee));
-    } catch (e) {
-      print('Error creating game session: $e');
-      rethrow;
-    }
-  }
-  
-  Future<GameSession> getGameSessionByCode(String sessionCode) async {
-    try {
-      final connection = _databaseService.connection;
-      if (connection == null) {
-        throw Exception('Database connection not initialized');
-      }
-      
-      final results = await connection.query(
-        'SELECT * FROM game_sessions WHERE session_code = @sessionCode',
-        substitutionValues: {'sessionCode': sessionCode},
-      );
-      
-      if (results.isEmpty) {
-        throw Exception('Game session not found');
-      }
-      
-      return GameSession.fromMap(results.first.toColumnMap());
-    } catch (e) {
-      print('Error fetching game session: $e');
-      rethrow;
-    }
-  }
-  
-  Future<PlayerSession> joinGameSession(String sessionCode, int userId) async {
-    try {
-      final connection = _databaseService.connection;
-      if (connection == null) {
-        throw Exception('Database connection not initialized');
-      }
-      
-      // Get game session id
-      final gameSessionResults = await connection.query(
-        'SELECT id FROM game_sessions WHERE session_code = @sessionCode',
-        substitutionValues: {'sessionCode': sessionCode},
-      );
-      
-      if (gameSessionResults.isEmpty) {
-        throw Exception('Game session not found');
-      }
-      
-      final gameSessionId = gameSessionResults.first[0] as int;
-      
-      // Check if user already joined
-      final existingSessionResults = await connection.query(
-        'SELECT * FROM player_sessions WHERE game_session_id = @gameSessionId AND user_id = @userId',
-        substitutionValues: {
-          'gameSessionId': gameSessionId,
-          'userId': userId,
-        },
-      );
-      
-      if (existingSessionResults.isNotEmpty) {
-        return PlayerSession.fromMap(existingSessionResults.first.toColumnMap());
-      }
-      
-      // Create new player session
-      final playerSessionResults = await connection.query(
-        '''
-        INSERT INTO player_sessions (game_session_id, user_id)
-        VALUES (@gameSessionId, @userId)
-        RETURNING *
-        ''',
-        substitutionValues: {
-          'gameSessionId': gameSessionId,
-          'userId': userId,
-        },
-      );
-      
-      return PlayerSession.fromMap(playerSessionResults.first.toColumnMap());
-    } catch (e) {
-      print('Error joining game session: $e');
-      rethrow;
-    }
-  }
-  
-  Future<PlayerAnswer> submitAnswer(
-    int playerSessionId,
-    int questionId,
-    int answerId,
-    int responseTimeMs,
-  ) async {
-    try {
-      final connection = _databaseService.connection;
-      if (connection == null) {
-        throw Exception('Database connection not initialized');
-      }
-      
-      // Check if answer is correct
-      final answerResults = await connection.query(
-        'SELECT is_correct FROM answers WHERE id = @answerId AND question_id = @questionId',
-        substitutionValues: {
-          'answerId': answerId,
-          'questionId': questionId,
-        },
-      );
-      
-      if (answerResults.isEmpty) {
-        throw Exception('Invalid answer');
-      }
-      
-      final isCorrect = answerResults.first[0] as bool;
-      
-      // Record player answer
-      final playerAnswerResults = await connection.query(
-        '''
-        INSERT INTO player_answers (player_session_id, question_id, answer_id, is_correct, response_time_ms)
-        VALUES (@playerSessionId, @questionId, @answerId, @isCorrect, @responseTimeMs)
-        RETURNING *
-        ''',
-        substitutionValues: {
-          'playerSessionId': playerSessionId,
-          'questionId': questionId,
-          'answerId': answerId,
-          'isCorrect': isCorrect,
-          'responseTimeMs': responseTimeMs,
-        },
-      );
-      
-      // If answer is correct, update player score
-      if (isCorrect) {
-        // Points calculation: faster response = more points (max 1000 points)
-        final points = _calculatePoints(responseTimeMs);
+      if (!kIsWeb) {
+        // For mobile, fetch from Firestore
+        Query query = _firestore.collection('users');
         
-        await connection.query(
-          'UPDATE player_sessions SET score = score + @points WHERE id = @playerSessionId',
-          substitutionValues: {
-            'points': points,
-            'playerSessionId': playerSessionId,
-          },
-        );
-      }
-      
-      return PlayerAnswer.fromMap(playerAnswerResults.first.toColumnMap());
-    } catch (e) {
-      print('Error submitting answer: $e');
-      rethrow;
-    }
-  }
-  
-  // Calculate points based on response time
-  // Faster response = more points (max 1000 points for instant response)
-  int _calculatePoints(int responseTimeMs) {
-    const maxPoints = 1000;
-    const maxResponseTime = 10000; // 10 seconds
-    
-    if (responseTimeMs >= maxResponseTime) {
-      return 100; // Minimum points for correct answer
-    }
-    
-    final timeRatio = 1 - (responseTimeMs / maxResponseTime);
-    return (maxPoints * timeRatio).round();
-  }
-  
-  Future<void> completePlayerSession(int playerSessionId) async {
-    try {
-      final connection = _databaseService.connection;
-      if (connection == null) {
-        throw Exception('Database connection not initialized');
-      }
-      
-      await connection.query(
-        'UPDATE player_sessions SET completed = TRUE WHERE id = @playerSessionId',
-        substitutionValues: {'playerSessionId': playerSessionId},
-      );
-    } catch (e) {
-      print('Error completing player session: $e');
-      rethrow;
-    }
-  }
-  
-  Future<void> endGameSession(int gameSessionId) async {
-    try {
-      final connection = _databaseService.connection;
-      if (connection == null) {
-        throw Exception('Database connection not initialized');
-      }
-      
-      await connection.query(
-        'UPDATE game_sessions SET ended_at = CURRENT_TIMESTAMP WHERE id = @gameSessionId',
-        substitutionValues: {'gameSessionId': gameSessionId},
-      );
-    } catch (e) {
-      print('Error ending game session: $e');
-      rethrow;
-    }
-  }
-  
-  Future<List<Map<String, dynamic>>> getLeaderboard({String type = 'global', int limit = 10}) async {
-    try {
-      if (kIsWeb) {
-        // Return mock leaderboard data for web platform
-        developer.log('Returning mock leaderboard data for web platform');
+        // Apply filters
+        // In a real app, you'd need more complex logic for timeframes
+
+        final QuerySnapshot snapshot = await query
+            .orderBy('total_score', descending: true)
+            .limit(100)
+            .get();
+        
+        return snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return {
+            'user_id': doc.id,
+            'username': data['username'] ?? 'Unknown',
+            'display_name': data['display_name'],
+            'avatar_url': data['avatar_url'],
+            'score': data['total_score'] ?? 0,
+            'level': data['level'] ?? 1,
+          };
+        }).toList();
+      } else {
+        // For web, return mock leaderboard
         return [
           {
-            'id': 1,
-            'username': 'quizmaster',
+            'user_id': '1',
+            'username': 'QuizMaster',
             'display_name': 'Quiz Master',
-            'avatar_url': 'assets/images/avatars/avatar1.png',
-            'total_score': 9850,
+            'avatar_url': null,
+            'score': 9500,
+            'level': 25,
           },
           {
-            'id': 2,
-            'username': 'triviaQueen',
-            'display_name': 'Trivia Queen',
-            'avatar_url': 'assets/images/avatars/avatar2.png',
-            'total_score': 9320,
+            'user_id': '2',
+            'username': 'BrainWhiz',
+            'display_name': 'Brain Whiz',
+            'avatar_url': null,
+            'score': 8750,
+            'level': 22,
           },
           {
-            'id': 3,
-            'username': 'brainiac',
-            'display_name': 'The Brainiac',
-            'avatar_url': 'assets/images/avatars/avatar3.png',
-            'total_score': 8990,
+            'user_id': '3',
+            'username': 'TriviaKing',
+            'display_name': 'Trivia King',
+            'avatar_url': null,
+            'score': 8200,
+            'level': 20,
           },
           {
-            'id': 4,
-            'username': 'knowledgeSeeker',
-            'display_name': 'Knowledge Seeker',
-            'avatar_url': 'assets/images/avatars/avatar4.png',
-            'total_score': 8540,
+            'user_id': '4',
+            'username': 'KnowledgeGuru',
+            'display_name': 'Knowledge Guru',
+            'avatar_url': null,
+            'score': 7900,
+            'level': 19,
           },
           {
-            'id': 5,
-            'username': 'quizWhiz',
-            'display_name': 'Quiz Whiz',
-            'avatar_url': 'assets/images/avatars/avatar5.png',
-            'total_score': 7950,
+            'user_id': '5',
+            'username': 'WisdomSeeker',
+            'display_name': 'Wisdom Seeker',
+            'avatar_url': null,
+            'score': 7600,
+            'level': 18,
           },
         ];
       }
-      
-      // For non-web platforms, use PostgreSQL
-      final connection = _databaseService.connection;
-      if (connection == null) {
-        throw Exception('Database connection not initialized');
-      }
-      
-      String query;
-      Map<String, dynamic> substitutionValues = {'limit': limit};
-      
-      switch (type) {
-        case 'daily':
-          query = '''
-            SELECT u.id, u.username, u.display_name, u.avatar_url, SUM(ps.score) as total_score
-            FROM users u
-            JOIN player_sessions ps ON u.id = ps.user_id
-            JOIN game_sessions gs ON ps.game_session_id = gs.id
-            WHERE gs.started_at >= CURRENT_DATE
-            GROUP BY u.id, u.username, u.display_name, u.avatar_url
-            ORDER BY total_score DESC
-            LIMIT @limit
-          ''';
-          break;
-        case 'weekly':
-          query = '''
-            SELECT u.id, u.username, u.display_name, u.avatar_url, SUM(ps.score) as total_score
-            FROM users u
-            JOIN player_sessions ps ON u.id = ps.user_id
-            JOIN game_sessions gs ON ps.game_session_id = gs.id
-            WHERE gs.started_at >= CURRENT_DATE - INTERVAL '7 days'
-            GROUP BY u.id, u.username, u.display_name, u.avatar_url
-            ORDER BY total_score DESC
-            LIMIT @limit
-          ''';
-          break;
-        case 'global':
-        default:
-          query = '''
-            SELECT u.id, u.username, u.display_name, u.avatar_url, SUM(ps.score) as total_score
-            FROM users u
-            JOIN player_sessions ps ON u.id = ps.user_id
-            GROUP BY u.id, u.username, u.display_name, u.avatar_url
-            ORDER BY total_score DESC
-            LIMIT @limit
-          ''';
-          break;
-      }
-      
-      final results = await connection.query(query, substitutionValues: substitutionValues);
-      
-      return results.map((row) => row.toColumnMap()).toList();
     } catch (e) {
-      print('Error fetching leaderboard: $e');
+      developer.log('Error getting leaderboard: $e');
       return [];
     }
+  }
+
+  // Create a match between two users
+  Future<QuizMatch> createMatch(String user1Id, {String? user2Id}) async {
+    try {
+      if (!kIsWeb) {
+        // Generate questions for the match
+        final List<Question> questions = await getQuestions(count: 5);
+        final List<String> questionIds = questions.map((q) => q.id).toList();
+        
+        // Create match document
+        final QuizMatch match = QuizMatch(
+          id: '',
+          user1Id: user1Id,
+          user2Id: user2Id,
+          status: user2Id != null ? 'waiting' : 'in_progress',
+          createdAt: DateTime.now(),
+          startedAt: user2Id != null ? null : DateTime.now(),
+          endedAt: null,
+          questionIds: questionIds,
+          user1Results: null,
+          user2Results: null,
+        );
+        
+        // Save to Firestore
+        final DocumentReference docRef = await _firestore.collection('matches').add(match.toJson());
+        return match.copyWith(id: docRef.id);
+      } else {
+        // For web, just simulate creating a match
+        final List<Question> questions = await getQuestions(count: 5);
+        final List<String> questionIds = questions.map((q) => q.id).toList();
+        
+        final QuizMatch match = QuizMatch(
+          id: 'mock-match-${DateTime.now().millisecondsSinceEpoch}',
+          user1Id: user1Id,
+          user2Id: user2Id,
+          status: user2Id != null ? 'waiting' : 'in_progress',
+          createdAt: DateTime.now(),
+          startedAt: user2Id != null ? null : DateTime.now(),
+          endedAt: null,
+          questionIds: questionIds,
+          user1Results: null,
+          user2Results: null,
+        );
+        
+        return match;
+      }
+    } catch (e) {
+      developer.log('Error creating match: $e');
+      throw Exception('Failed to create match: $e');
+    }
+  }
+
+  // Helper method to add questions to Firestore (for initial setup)
+  Future<void> addQuestionToFirestore(Question question) async {
+    try {
+      await _firestore.collection('questions').add(question.toJson());
+    } catch (e) {
+      developer.log('Error adding question to Firestore: $e');
+      rethrow;
+    }
+  }
+
+  // Helper method to add categories to Firestore (for initial setup)
+  Future<void> addCategoryToFirestore(QuizCategory category) async {
+    try {
+      await _firestore.collection('categories').doc(category.id).set(category.toJson());
+    } catch (e) {
+      developer.log('Error adding category to Firestore: $e');
+      rethrow;
+    }
+  }
+}
+
+// Extension method for QuizMatch
+extension QuizMatchExtension on QuizMatch {
+  QuizMatch copyWith({
+    String? id,
+    String? user1Id,
+    String? user2Id,
+    String? status,
+    DateTime? createdAt,
+    DateTime? startedAt,
+    DateTime? endedAt,
+    List<String>? questionIds,
+    Map<String, dynamic>? user1Results,
+    Map<String, dynamic>? user2Results,
+  }) {
+    return QuizMatch(
+      id: id ?? this.id,
+      user1Id: user1Id ?? this.user1Id,
+      user2Id: user2Id ?? this.user2Id,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      startedAt: startedAt ?? this.startedAt,
+      endedAt: endedAt ?? this.endedAt,
+      questionIds: questionIds ?? this.questionIds,
+      user1Results: user1Results ?? this.user1Results,
+      user2Results: user2Results ?? this.user2Results,
+    );
   }
 }
