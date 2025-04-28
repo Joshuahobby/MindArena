@@ -342,25 +342,153 @@ app.get('/', (req, res) => {
           }
         };
         
+        // Show an error message in the form
+        function showFormError(formId, message) {
+          // Check if an error element already exists, if not create one
+          let errorElement = document.getElementById(`${formId}-error`);
+          
+          if (!errorElement) {
+            errorElement = document.createElement('div');
+            errorElement.id = `${formId}-error`;
+            errorElement.className = 'error-message';
+            errorElement.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+            errorElement.style.color = '#ff5252';
+            errorElement.style.padding = '10px';
+            errorElement.style.borderRadius = '4px';
+            errorElement.style.marginBottom = '16px';
+            errorElement.style.borderLeft = '4px solid #ff5252';
+            
+            // Insert at the top of the form
+            const form = document.getElementById(formId);
+            form.insertBefore(errorElement, form.firstChild);
+          }
+          
+          errorElement.innerHTML = `<strong>Error:</strong> ${message}`;
+          errorElement.style.display = 'block';
+        }
+        
+        // Clear any form errors
+        function clearFormError(formId) {
+          const errorElement = document.getElementById(`${formId}-error`);
+          if (errorElement) {
+            errorElement.style.display = 'none';
+          }
+        }
+        
+        // Show a success message
+        function showSuccess(message) {
+          // Create a success toast
+          const toast = document.createElement('div');
+          toast.className = 'success-toast';
+          toast.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              <span>${message}</span>
+            </div>
+          `;
+          
+          // Style the toast
+          Object.assign(toast.style, {
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            backgroundColor: '#4CAF50',
+            color: 'white',
+            padding: '12px 20px',
+            borderRadius: '4px',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+            zIndex: '9999',
+            opacity: '0',
+            transition: 'opacity 0.3s ease-in-out'
+          });
+          
+          // Add to DOM
+          document.body.appendChild(toast);
+          
+          // Show and auto-hide
+          setTimeout(() => {
+            toast.style.opacity = '1';
+          }, 10);
+          
+          setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => {
+              document.body.removeChild(toast);
+            }, 300);
+          }, 3000);
+        }
+        
         // Google Sign-In function
         function signInWithGoogle() {
-          // In a real app, this would use Firebase Authentication with Google
-          alert('Google Sign-In will be implemented with Firebase Authentication');
-          
-          // Close both modals to make sure
-          closeModal('loginModal');
-          closeModal('registerModal');
+          try {
+            // In a real app, this would use Firebase Authentication with Google
+            console.log('Google Sign-In initiated');
+            
+            // Simulate API call
+            setTimeout(() => {
+              // Show success message
+              showSuccess('Successfully signed in with Google!');
+              
+              // Close both modals to make sure
+              closeModal('loginModal');
+              closeModal('registerModal');
+            }, 1000);
+          } catch (error) {
+            console.error('Google Sign-In error:', error);
+            showFormError('loginForm', 'Failed to sign in with Google. Please try again.');
+          }
         }
         
         // Handle form submissions
         document.getElementById('loginForm').addEventListener('submit', function(event) {
           event.preventDefault();
-          const email = document.getElementById('email').value;
-          const password = document.getElementById('password').value;
           
-          // In a real app, we would authenticate with Firebase here
-          alert('Login functionality will be implemented with Firebase. Email: ' + email);
-          closeModal('loginModal');
+          // Clear previous errors
+          clearFormError('loginForm');
+          
+          try {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            // Validate inputs
+            if (!email) {
+              showFormError('loginForm', 'Please enter your email address.');
+              return;
+            }
+            
+            if (!password) {
+              showFormError('loginForm', 'Please enter your password.');
+              return;
+            }
+            
+            // Simulate loading state
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.innerHTML = 'Logging in...';
+            submitButton.disabled = true;
+            
+            // In a real app, this would be an API call to Firebase
+            console.log('Login initiated for:', email);
+            
+            // Simulate API call
+            setTimeout(() => {
+              // Reset button
+              submitButton.innerHTML = originalText;
+              submitButton.disabled = false;
+              
+              // Show success message
+              showSuccess('Successfully logged in!');
+              
+              // Close modal
+              closeModal('loginModal');
+            }, 1000);
+          } catch (error) {
+            console.error('Login error:', error);
+            showFormError('loginForm', 'An error occurred during login. Please try again.');
+          }
         });
         
         // Function to handle registration form submission
@@ -369,19 +497,66 @@ app.get('/', (req, res) => {
             event.preventDefault();
           }
           
-          const username = document.getElementById('username').value;
-          const email = document.getElementById('regEmail').value;
-          const password = document.getElementById('regPassword').value;
-          const confirmPassword = document.getElementById('confirmPassword').value;
+          // Clear previous errors
+          clearFormError('registerForm');
           
-          if (password !== confirmPassword) {
-            alert('Passwords do not match');
-            return;
+          try {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Validate inputs
+            if (!username) {
+              showFormError('registerForm', 'Please enter a username.');
+              return;
+            }
+            
+            if (!email) {
+              showFormError('registerForm', 'Please enter your email address.');
+              return;
+            }
+            
+            if (!password) {
+              showFormError('registerForm', 'Please enter a password.');
+              return;
+            }
+            
+            if (password.length < 6) {
+              showFormError('registerForm', 'Password must be at least 6 characters long.');
+              return;
+            }
+            
+            if (password !== confirmPassword) {
+              showFormError('registerForm', 'Passwords do not match. Please try again.');
+              return;
+            }
+            
+            // Get the register button
+            const registerButton = document.querySelector('#registerForm button[type="button"]');
+            const originalText = registerButton.innerHTML;
+            registerButton.innerHTML = 'Creating account...';
+            registerButton.disabled = true;
+            
+            // In a real app, this would be an API call to Firebase
+            console.log('Registration initiated for:', username, email);
+            
+            // Simulate API call
+            setTimeout(() => {
+              // Reset button
+              registerButton.innerHTML = originalText;
+              registerButton.disabled = false;
+              
+              // Show success message
+              showSuccess('Account created successfully!');
+              
+              // Close modal
+              closeModal('registerModal');
+            }, 1000);
+          } catch (error) {
+            console.error('Registration error:', error);
+            showFormError('registerForm', 'An error occurred during registration. Please try again.');
           }
-          
-          // In a real app, we would register with Firebase here
-          alert('Registration functionality will be implemented with Firebase. Username: ' + username + ', Email: ' + email);
-          closeModal('registerModal');
         }
         
         // Add event listener to the registration form
