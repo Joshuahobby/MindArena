@@ -447,43 +447,44 @@ app.get('/', (req, res) => {
           }, 3000);
         }
         
+        // Use the showModal function already defined above
+        
         // Google Sign-In function
         function signInWithGoogle() {
           clearFormError('loginForm');
           clearFormError('registerForm');
           
-          try {
-            const googleProvider = new firebase.auth.GoogleAuthProvider();
-            
-            showFormError('loginForm', 'To enable Google Sign-in, please add your Replit domain to Firebase authorized domains list in the Firebase Console under Authentication → Settings → Authorized domains');
-            
-            firebase.auth().signInWithPopup(googleProvider)
-              .then((result) => {
-                // This gives you a Google Access Token
-                const credential = result.credential;
-                const token = credential.accessToken;
-                // The signed-in user info
-                const user = result.user;
-                
-                console.log('Successfully signed in with Google:', user.displayName);
-                showSuccess('Welcome ' + user.displayName + '! Successfully signed in with Google!');
-                
-                // Close both modals
-                closeModal('loginModal');
-                closeModal('registerModal');
-              })
-              .catch((error) => {
-                // Handle Errors here
-                const errorCode = error.code;
-                const errorMessage = error.message;
-                console.error('Google Sign-In error:', errorCode, errorMessage);
-                
-                if (errorCode === 'auth/configuration-not-found') {
-                  showFormError('loginForm', 'Please add your Replit domain to Firebase authorized domains list in the Firebase Console under Authentication → Settings → Authorized domains');
-                } else {
-                  showFormError('loginForm', 'Failed to sign in with Google: ' + errorMessage);
-                }
-              });
+          const googleProvider = new firebase.auth.GoogleAuthProvider();
+          
+          showFormError('loginForm', 'To enable Google Sign-in, please add your Replit domain to Firebase authorized domains list in the Firebase Console under Authentication → Settings → Authorized domains');
+          
+          firebase.auth().signInWithPopup(googleProvider)
+            .then((result) => {
+              // This gives you a Google Access Token
+              const credential = result.credential;
+              const token = credential.accessToken;
+              // The signed-in user info
+              const user = result.user;
+              
+              console.log('Successfully signed in with Google:', user.displayName);
+              showSuccess('Welcome ' + user.displayName + '! Successfully signed in with Google!');
+              
+              // Close both modals
+              closeModal('loginModal');
+              closeModal('registerModal');
+            })
+            .catch((error) => {
+              // Handle Errors here
+              const errorCode = error.code;
+              const errorMessage = error.message;
+              console.error('Google Sign-In error:', errorCode, errorMessage);
+              
+              if (errorCode === 'auth/configuration-not-found') {
+                showFormError('loginForm', 'Please add your Replit domain to Firebase authorized domains list in the Firebase Console under Authentication → Settings → Authorized domains');
+              } else {
+                showFormError('loginForm', 'Failed to sign in with Google: ' + errorMessage);
+              }
+            });
         }
         
         // Handle login form submission
