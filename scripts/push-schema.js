@@ -22,9 +22,9 @@ async function main() {
     // Connect to the database and create tables
     console.log('Creating database schema...');
     
-    // Manual query to create the necessary tables
+    // Execute each statement separately
+    console.log('Creating users table...');
     await sql`
-      -- Create users table
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         user_id VARCHAR(255) NOT NULL UNIQUE,
@@ -44,9 +44,11 @@ async function main() {
         battle_pass_level INTEGER NOT NULL DEFAULT 1,
         battle_pass_xp INTEGER NOT NULL DEFAULT 0,
         settings JSONB DEFAULT '{"notifications": true, "sound": true, "music": true, "vibration": true, "language": "en"}'
-      );
+      )
+    `;
 
-      -- Create clans table
+    console.log('Creating clans table...');
+    await sql`
       CREATE TABLE IF NOT EXISTS clans (
         id SERIAL PRIMARY KEY,
         name VARCHAR(50) NOT NULL UNIQUE,
@@ -64,12 +66,16 @@ async function main() {
         win_rate INTEGER NOT NULL DEFAULT 50,
         max_members INTEGER NOT NULL DEFAULT 50,
         trophies INTEGER NOT NULL DEFAULT 0
-      );
+      )
+    `;
 
-      -- Add clan_id to users table
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS clan_id INTEGER REFERENCES clans(id) ON DELETE SET NULL;
+    console.log('Adding clan_id to users table...');
+    await sql`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS clan_id INTEGER REFERENCES clans(id) ON DELETE SET NULL
+    `;
 
-      -- Create clan_roles table
+    console.log('Creating clan_roles table...');
+    await sql`
       CREATE TABLE IF NOT EXISTS clan_roles (
         id SERIAL PRIMARY KEY,
         name VARCHAR(30) NOT NULL,
@@ -78,9 +84,11 @@ async function main() {
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
         UNIQUE(name, clan_id)
-      );
+      )
+    `;
 
-      -- Create clan_memberships table
+    console.log('Creating clan_memberships table...');
+    await sql`
       CREATE TABLE IF NOT EXISTS clan_memberships (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         clan_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
@@ -90,9 +98,11 @@ async function main() {
         contributed_tokens INTEGER NOT NULL DEFAULT 0,
         last_active TIMESTAMP NOT NULL DEFAULT NOW(),
         PRIMARY KEY(user_id, clan_id)
-      );
+      )
+    `;
 
-      -- Create clan_invitations table
+    console.log('Creating clan_invitations table...');
+    await sql`
       CREATE TABLE IF NOT EXISTS clan_invitations (
         id SERIAL PRIMARY KEY,
         clan_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
@@ -102,9 +112,11 @@ async function main() {
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         expires_at TIMESTAMP,
         UNIQUE(clan_id, invited_user_id)
-      );
+      )
+    `;
 
-      -- Create clan_battles table
+    console.log('Creating clan_battles table...');
+    await sql`
       CREATE TABLE IF NOT EXISTS clan_battles (
         id SERIAL PRIMARY KEY,
         clan1_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
@@ -119,9 +131,11 @@ async function main() {
         tokens_awarded INTEGER DEFAULT 0,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-      );
+      )
+    `;
 
-      -- Create clan_battle_participants table
+    console.log('Creating clan_battle_participants table...');
+    await sql`
       CREATE TABLE IF NOT EXISTS clan_battle_participants (
         id SERIAL PRIMARY KEY,
         battle_id INTEGER NOT NULL REFERENCES clan_battles(id) ON DELETE CASCADE,
@@ -134,7 +148,7 @@ async function main() {
         contributed_points INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-      );
+      )
     `;
     
     console.log('Database schema created successfully!');

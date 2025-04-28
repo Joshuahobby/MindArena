@@ -6,10 +6,17 @@ const WebSocket = require('ws');
 const firebase = require('firebase/app');
 require('firebase/auth');
 
+// Import clan routes
+const clanRoutes = require('./server/clan-routes');
+
 // Initialize express app and create HTTP server
 const app = express();
 const port = process.env.PORT || 5000;
 const server = http.createServer(app);
+
+// Initialize middleware
+app.use(cors());
+app.use(express.json());
 
 // Initialize WebSocket server
 const wss = new WebSocket.Server({ server, path: '/ws' });
