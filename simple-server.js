@@ -6582,8 +6582,18 @@ app.get('/play', (req, res) => {
             }
           }
           
-          // Close the WebSocket connection if it exists
-          if (socket && socket.readyState === WebSocket.OPEN) {
+          // Get current user
+          const user = firebase.auth().currentUser;
+          
+          // Send logout message to WebSocket server if connected
+          if (socket && socket.readyState === WebSocket.OPEN && user) {
+            // Send logout message
+            socket.send(JSON.stringify({
+              type: 'logout',
+              userId: user.uid
+            }));
+            
+            // Close the WebSocket connection
             socket.close();
           }
           
