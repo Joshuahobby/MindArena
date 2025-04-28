@@ -1,43 +1,27 @@
 class Question {
-  final String id;
-  final String question;
+  final String text;
   final List<String> answers;
-  final int correctAnswer;
-  final String? category;
-  final String? difficulty;
-  final String? explanation;
-
+  final int? correctAnswer; // Index of the correct answer
+  final double timeLimit; // Time limit in seconds
+  
   Question({
-    required this.id,
-    required this.question,
+    required this.text,
     required this.answers,
-    required this.correctAnswer,
-    this.category,
-    this.difficulty,
-    this.explanation,
+    this.correctAnswer,
+    required this.timeLimit,
   });
-
-  factory Question.fromJson(Map<String, dynamic> json) {
+  
+  Question copyWith({
+    String? text,
+    List<String>? answers,
+    int? correctAnswer,
+    double? timeLimit,
+  }) {
     return Question(
-      id: json['id'] ?? '',
-      question: json['question'] ?? '',
-      answers: List<String>.from(json['answers'] ?? []),
-      correctAnswer: json['correctAnswer'] ?? 0,
-      category: json['category'],
-      difficulty: json['difficulty'],
-      explanation: json['explanation'],
+      text: text ?? this.text,
+      answers: answers ?? this.answers,
+      correctAnswer: correctAnswer ?? this.correctAnswer,
+      timeLimit: timeLimit ?? this.timeLimit,
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'question': question,
-      'answers': answers,
-      'correctAnswer': correctAnswer,
-      'category': category,
-      'difficulty': difficulty,
-      'explanation': explanation,
-    };
   }
 }

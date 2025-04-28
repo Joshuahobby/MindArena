@@ -11,9 +11,12 @@ import 'package:mind_arena/services/firebase_service.dart';
 import 'package:mind_arena/services/database_service_factory.dart';
 import 'package:mind_arena/services/seed_service.dart';
 import 'package:mind_arena/services/auth_service.dart';
+import 'package:mind_arena/services/websocket_service.dart';
+import 'package:mind_arena/services/game_service.dart';
 import 'package:mind_arena/screens/auth/login_screen.dart';
 import 'package:mind_arena/screens/home/home_screen.dart';
 import 'package:mind_arena/screens/admin/admin_dashboard_screen.dart';
+import 'package:mind_arena/screens/game/game_screen.dart';
 import 'package:mind_arena/theme/app_theme.dart';
 import 'package:mind_arena/models/user_model.dart';
 
@@ -125,6 +128,12 @@ class _MindArenaAppState extends State<MindArenaApp> {
       providers: [
         ChangeNotifierProvider<AuthService>.value(value: _authService),
         ChangeNotifierProvider(create: (context) => AppState()),
+        ProxyProvider<AuthService, WebSocketService>(
+          update: (context, authService, previous) => previous ?? WebSocketService(authService),
+        ),
+        ProxyProvider<WebSocketService, GameService>(
+          update: (context, webSocketService, previous) => previous ?? GameService(webSocketService),
+        ),
       ],
       child: MaterialApp(
         title: 'MindArena',
