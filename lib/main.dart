@@ -146,6 +146,7 @@ class _MindArenaAppState extends State<MindArenaApp> {
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const HomeScreen(),
           '/admin': (context) => const AdminDashboardScreen(),
+          '/game': (context) => const GameScreen(),
         },
       ),
     );

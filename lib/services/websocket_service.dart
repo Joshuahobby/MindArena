@@ -6,6 +6,9 @@ import 'package:web_socket_channel/io.dart';
 import 'package:mind_arena/models/user_model.dart';
 import 'package:mind_arena/services/auth_service.dart';
 
+// Import html for web platform
+import 'dart:html' if (dart.library.io) 'dart:io' as platform;
+
 class WebSocketService with ChangeNotifier {
   WebSocketChannel? _channel;
   bool _isConnected = false;
@@ -184,8 +187,17 @@ class WebSocketService with ChangeNotifier {
   
   String _getWebSocketUrl() {
     // Determine the WebSocket URL based on the current environment
-    final protocol = kIsWeb ? (window.location.protocol == 'https:' ? 'wss:' : 'ws:') : 'ws:';
-    final host = kIsWeb ? window.location.host : 'localhost:5000';
+    String protocol = 'ws:';
+    String host = 'localhost:5000';
+    
+    if (kIsWeb) {
+      try {
+        protocol = platform.window.location.protocol == 'https:' ? 'wss:' : 'ws:';
+        host = platform.window.location.host;
+      } catch (e) {
+        print('Error getting web location: $e');
+      }
+    }
     
     return '$protocol//$host/ws';
   }
