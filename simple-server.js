@@ -20,6 +20,8 @@ const clients = new Map();
 const matchmakingQueue = [];
 // Store active games
 const activeGames = new Map();
+// Store single player games
+const singlePlayerGames = new Map();
 // Store online user count
 let onlineUserCount = 0;
 
@@ -165,6 +167,11 @@ function handleClientMessage(ws, message) {
     case 'logout':
       // Handle user logout
       handleLogout(clientInfo.userId);
+      break;
+      
+    case 'start_single_player':
+      // Start a single player game against a bot
+      handleSinglePlayerGame(ws, clientInfo);
       break;
       
     default:
@@ -557,6 +564,14 @@ function handleAnswerSubmission(ws, clientInfo, message) {
   }
   
   const gameId = clientInfo.gameId;
+  
+  // Check if it's a single player game
+  if (gameId.startsWith('single_')) {
+    handleSinglePlayerAnswerSubmission(ws, clientInfo, message);
+    return;
+  }
+  
+  // Handle multiplayer game
   const game = activeGames.get(gameId);
   
   if (!game || game.status !== 'playing') {
@@ -710,6 +725,389 @@ function endGame(gameId, disconnectedPlayerId = null) {
   
   // Remove game from active games
   activeGames.delete(gameId);
+}
+
+// Handle single player game against a bot
+function handleSinglePlayerGame(ws, clientInfo) {
+  if (!clientInfo.isAuthenticated) {
+    sendErrorMessage(ws, 'You must be authenticated to play a game');
+    return;
+  }
+  
+  if (clientInfo.inGame) {
+    sendErrorMessage(ws, 'You are already in a game');
+    return;
+  }
+  
+  if (clientInfo.inMatchmaking) {
+    // If the user is in matchmaking, remove them from the queue
+    cancelMatchmaking(ws, clientInfo);
+  }
+  
+  // Create a game ID
+  const gameId = `single_${Date.now()}`;
+  
+  // Generate a random bot name
+  const botNames = [
+    'MindBot', 'QuizMaster', 'BrainiacBot', 'GeniusAI', 'WizBot',
+    'SmartBrain', 'ThinkTank', 'KnowledgeKeeper', 'QuizWhiz', 'MasterMind'
+  ];
+  const botName = `${botNames[Math.floor(Math.random() * botNames.length)]}#${Math.floor(Math.random() * 1000)}`;
+  const botId = `bot_${Date.now()}`;
+  
+  console.log(`Creating single player game ${gameId} for ${clientInfo.username} against bot ${botName}`);
+  
+  // Update client info
+  clientInfo.inGame = true;
+  clientInfo.gameId = gameId;
+  clients.set(ws, clientInfo);
+  
+  // Prepare questions
+  const questions = getRandomQuestions(5);
+  
+  // Create game state
+  const gameState = {
+    id: gameId,
+    isSinglePlayer: true,
+    players: [
+      {
+        ws: ws,
+        userId: clientInfo.userId,
+        username: clientInfo.username,
+        score: 0,
+        answers: [],
+        ready: false,
+        isBot: false
+      },
+      {
+        userId: botId,
+        username: botName,
+        score: 0,
+        answers: [],
+        ready: false,
+        isBot: true
+      }
+    ],
+    questions,
+    currentQuestion: 0,
+    status: 'preparing',
+    startTime: null,
+    endTime: null
+  };
+  
+  // Store game state
+  singlePlayerGames.set(gameId, gameState);
+  
+  // Notify the player
+  ws.send(JSON.stringify({
+    type: 'match_found',
+    opponent: {
+      userId: botId,
+      username: botName,
+      isBot: true
+    },
+    isSinglePlayer: true
+  }));
+  
+  // Start game after 3 seconds
+  setTimeout(() => startSinglePlayerGame(gameId), 3000);
+}
+
+// Start a single player game
+function startSinglePlayerGame(gameId) {
+  const game = singlePlayerGames.get(gameId);
+  if (!game) return;
+  
+  console.log(`Starting single player game ${gameId}`);
+  
+  // Update game status
+  game.status = 'playing';
+  game.startTime = Date.now();
+  
+  // Store updated game state
+  singlePlayerGames.set(gameId, game);
+  
+  // Notify player
+  const player = game.players[0]; // The human player
+  player.ws.send(JSON.stringify({
+    type: 'game_start',
+    isSinglePlayer: true
+  }));
+  
+  // Send first question
+  sendSinglePlayerQuestion(gameId);
+}
+
+// Send a question in a single player game
+function sendSinglePlayerQuestion(gameId) {
+  const game = singlePlayerGames.get(gameId);
+  if (!game || game.status !== 'playing') return;
+  
+  if (game.currentQuestion >= game.questions.length) {
+    // All questions have been answered, end the game
+    endSinglePlayerGame(gameId);
+    return;
+  }
+  
+  const questionData = game.questions[game.currentQuestion];
+  
+  console.log(`Sending question ${game.currentQuestion + 1} to single player game ${gameId}`);
+  
+  // Prepare question data to send
+  const questionToSend = {
+    type: 'question',
+    questionNumber: game.currentQuestion + 1,
+    totalQuestions: game.questions.length,
+    question: questionData.question,
+    answers: questionData.answers,
+    timeLimit: 15, // 15 seconds per question
+    isSinglePlayer: true
+  };
+  
+  // Send to the player
+  const player = game.players[0]; // The human player
+  player.ws.send(JSON.stringify(questionToSend));
+  
+  // Make the bot "think" about the answer
+  const botThinkingTime = Math.random() * 12 + 1; // 1-13 seconds
+  
+  // Bot will submit an answer after its thinking time
+  setTimeout(() => {
+    // 70% chance the bot will get the correct answer
+    const correctProbability = 0.7;
+    let botAnswer;
+    
+    if (Math.random() < correctProbability) {
+      // Bot gets it right
+      botAnswer = questionData.correctAnswer;
+    } else {
+      // Bot gets it wrong - choose a random incorrect answer
+      const incorrectAnswers = questionData.answers
+        .map((_, index) => index)
+        .filter(index => index !== questionData.correctAnswer);
+      botAnswer = incorrectAnswers[Math.floor(Math.random() * incorrectAnswers.length)];
+    }
+    
+    // Record the bot's answer
+    const bot = game.players[1]; // The bot
+    bot.answers[game.currentQuestion] = {
+      answer: botAnswer,
+      isCorrect: botAnswer === questionData.correctAnswer,
+      responseTime: botThinkingTime
+    };
+    
+    // Update the game state
+    singlePlayerGames.set(gameId, game);
+  }, botThinkingTime * 1000);
+  
+  // Set a timer to move to the next question
+  game.questionTimer = setTimeout(() => {
+    processSinglePlayerAnswers(gameId);
+  }, 16000); // 15 seconds + 1 second buffer
+}
+
+// Process answers for the current question in a single player game
+function processSinglePlayerAnswers(gameId) {
+  const game = singlePlayerGames.get(gameId);
+  if (!game || game.status !== 'playing') return;
+  
+  console.log(`Processing answers for question ${game.currentQuestion + 1} in single player game ${gameId}`);
+  
+  const question = game.questions[game.currentQuestion];
+  const correctAnswer = question.correctAnswer;
+  
+  // Process the player's answer
+  const player = game.players[0]; // The human player
+  const bot = game.players[1]; // The bot
+  
+  // Get the player's answer for this question
+  const playerAnswer = player.answers[game.currentQuestion];
+  
+  // If the player didn't answer, count as incorrect
+  if (!playerAnswer) {
+    player.answers[game.currentQuestion] = {
+      answer: null,
+      isCorrect: false,
+      responseTime: 15 // Max time
+    };
+  } else {
+    // Check if the answer is correct
+    const isCorrect = playerAnswer.answer === correctAnswer;
+    
+    // Update the player's answer
+    playerAnswer.isCorrect = isCorrect;
+    
+    // Update score if correct
+    if (isCorrect) {
+      // Score formula: max 1000 points, decreases with response time
+      // A 1-second response = 1000 points, 15-second response = 100 points
+      const timeBonus = Math.max(0, 15 - playerAnswer.responseTime);
+      const score = 100 + Math.round(timeBonus * 60);
+      player.score += score;
+    }
+  }
+  
+  // Update bot's score if correct
+  const botAnswer = bot.answers[game.currentQuestion];
+  if (botAnswer && botAnswer.isCorrect) {
+    const timeBonus = Math.max(0, 15 - botAnswer.responseTime);
+    const score = 100 + Math.round(timeBonus * 60);
+    bot.score += score;
+  }
+  
+  // Send feedback to the player
+  const playerAnswerObj = player.answers[game.currentQuestion];
+  
+  player.ws.send(JSON.stringify({
+    type: 'answer_feedback',
+    questionNumber: game.currentQuestion + 1,
+    correctAnswer,
+    playerAnswer: playerAnswerObj.answer,
+    isCorrect: playerAnswerObj.isCorrect,
+    responseTime: playerAnswerObj.responseTime,
+    isSinglePlayer: true,
+    botAnswer: botAnswer ? botAnswer.answer : null,
+    botCorrect: botAnswer ? botAnswer.isCorrect : false,
+    botResponseTime: botAnswer ? botAnswer.responseTime : 15
+  }));
+  
+  // Send updated scores
+  sendSinglePlayerScoreUpdate(gameId);
+  
+  // Move to the next question
+  game.currentQuestion++;
+  singlePlayerGames.set(gameId, game);
+  
+  // Wait a moment before sending the next question
+  setTimeout(() => {
+    sendSinglePlayerQuestion(gameId);
+  }, 2000);
+}
+
+// Send score update in a single player game
+function sendSinglePlayerScoreUpdate(gameId) {
+  const game = singlePlayerGames.get(gameId);
+  if (!game) return;
+  
+  const player = game.players[0]; // The human player
+  const bot = game.players[1]; // The bot
+  
+  player.ws.send(JSON.stringify({
+    type: 'update_scores',
+    scores: {
+      player: player.score,
+      opponent: bot.score
+    },
+    isSinglePlayer: true
+  }));
+}
+
+// End a single player game
+function endSinglePlayerGame(gameId) {
+  const game = singlePlayerGames.get(gameId);
+  if (!game) return;
+  
+  console.log(`Ending single player game ${gameId}`);
+  
+  // Update game status
+  game.status = 'ended';
+  game.endTime = Date.now();
+  
+  // Clear any timers
+  if (game.questionTimer) {
+    clearTimeout(game.questionTimer);
+  }
+  
+  // Calculate final results
+  const player = game.players[0]; // The human player
+  const bot = game.players[1]; // The bot
+  
+  const playerScore = player.score;
+  const botScore = bot.score;
+  
+  const isWinner = playerScore > botScore;
+  const isDraw = playerScore === botScore;
+  
+  // Calculate token rewards
+  let tokenReward = 5; // Base reward
+  
+  if (isWinner) {
+    tokenReward += 10; // Bonus for winning
+  }
+  
+  // Calculate XP rewards
+  let xpReward = 20; // Base XP
+  
+  if (isWinner) {
+    xpReward += 30; // Bonus XP for winning
+  }
+  
+  // Award rewards to the player
+  awardGameRewards(player.userId, tokenReward, xpReward, isWinner);
+  
+  // Send results to the player
+  player.ws.send(JSON.stringify({
+    type: 'game_over',
+    results: {
+      playerScore,
+      opponentScore: botScore,
+      isWinner,
+      isDraw,
+      rewards: {
+        tokens: tokenReward,
+        xp: xpReward
+      }
+    },
+    isSinglePlayer: true
+  }));
+  
+  // Update client info
+  const clientEntry = Array.from(clients.entries()).find(([_, client]) => client.userId === player.userId);
+  if (clientEntry) {
+    const [ws, clientInfo] = clientEntry;
+    clientInfo.inGame = false;
+    clientInfo.gameId = null;
+    clients.set(ws, clientInfo);
+  }
+  
+  // Remove the game after a delay
+  setTimeout(() => {
+    singlePlayerGames.delete(gameId);
+  }, 60000); // Keep the game data for 1 minute for stats
+}
+
+// Handle single player answer submission
+function handleSinglePlayerAnswerSubmission(ws, clientInfo, message) {
+  if (!clientInfo.inGame || !clientInfo.gameId) {
+    sendErrorMessage(ws, 'You are not in a game');
+    return;
+  }
+  
+  const gameId = clientInfo.gameId;
+  const game = singlePlayerGames.get(gameId);
+  
+  if (!game || game.status !== 'playing') {
+    sendErrorMessage(ws, 'Game not found or not in playing state');
+    return;
+  }
+  
+  const player = game.players[0]; // In single player, human is always at index 0
+  if (player.userId !== clientInfo.userId) {
+    sendErrorMessage(ws, 'Player not found in game');
+    return;
+  }
+  
+  // Record the player's answer
+  player.answers[game.currentQuestion] = {
+    answer: message.answer,
+    isCorrect: null, // Will be set when answers are processed
+    responseTime: message.responseTime || 1
+  };
+  
+  // Update the game state
+  singlePlayerGames.set(gameId, game);
+  
+  console.log(`Received answer from ${player.username} for question ${game.currentQuestion + 1} in single player game ${gameId}`);
 }
 
 // Award tokens and Battle Pass XP to a player
