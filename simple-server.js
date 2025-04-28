@@ -18,6 +18,9 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 
+// Register API routes
+app.use('/api/clans', clanRoutes);
+
 // Initialize WebSocket server
 const wss = new WebSocket.Server({ server, path: '/ws' });
 

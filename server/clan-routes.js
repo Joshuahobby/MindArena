@@ -291,6 +291,15 @@ function hasPermission(permission) {
 
 // ===== CLAN ROUTES =====
 
+// Status endpoint for testing
+router.get('/status', async (req, res) => {
+  res.json({
+    success: true,
+    message: 'Clan API is operational',
+    timestamp: new Date()
+  });
+});
+
 // Create a new clan
 router.post('/create', isAuthenticated, async (req, res) => {
   const { userId, name, description, logo } = req.body;
