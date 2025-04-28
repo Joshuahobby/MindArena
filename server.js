@@ -254,7 +254,7 @@ app.get('/', (req, res) => {
             <label for="confirmPassword">Confirm Password</label>
             <input type="password" id="confirmPassword" placeholder="Confirm your password" required>
             
-            <button type="submit" class="button" style="width: 100%; margin-bottom: 16px;">REGISTER</button>
+            <button type="button" onclick="handleRegister()" class="button" style="width: 100%; margin-bottom: 16px;">REGISTER</button>
             
             <div style="text-align: center; margin-bottom: 16px;">
               <p style="margin-bottom: 10px; color: #B2BEC3;">OR</p>
@@ -346,7 +346,10 @@ app.get('/', (req, res) => {
         function signInWithGoogle() {
           // In a real app, this would use Firebase Authentication with Google
           alert('Google Sign-In will be implemented with Firebase Authentication');
+          
+          // Close both modals to make sure
           closeModal('loginModal');
+          closeModal('registerModal');
         }
         
         // Handle form submissions
@@ -360,8 +363,12 @@ app.get('/', (req, res) => {
           closeModal('loginModal');
         });
         
-        document.getElementById('registerForm').addEventListener('submit', function(event) {
-          event.preventDefault();
+        // Function to handle registration form submission
+        function handleRegister(event) {
+          if (event) {
+            event.preventDefault();
+          }
+          
           const username = document.getElementById('username').value;
           const email = document.getElementById('regEmail').value;
           const password = document.getElementById('regPassword').value;
@@ -375,7 +382,10 @@ app.get('/', (req, res) => {
           // In a real app, we would register with Firebase here
           alert('Registration functionality will be implemented with Firebase. Username: ' + username + ', Email: ' + email);
           closeModal('registerModal');
-        });
+        }
+        
+        // Add event listener to the registration form
+        document.getElementById('registerForm').addEventListener('submit', handleRegister);
       </script>
     </body>
     </html>
