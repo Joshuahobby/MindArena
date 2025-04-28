@@ -14,10 +14,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "MindArena Web Demo"
+args = "MindArena Server"
 
 [[workflows.workflow]]
-name = "MindArena Web Demo"
+name = "MindArena Server"
 author = "agent"
 
 [[workflows.workflow.tasks]]
