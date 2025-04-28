@@ -1,109 +1,120 @@
 class User {
-  final int? id;
+  final String id;
   final String username;
-  final String? displayName;
   final String email;
+  final String? phoneNumber;
   final String? avatarUrl;
+  final int tokens;
   final int level;
-  final int experiencePoints;
-  final int coins;
-  final bool isPremium;
+  final int xp;
+  final bool isOnline;
+  final DateTime joinDate;
+  final bool hasPremiumBattlePass;
+  final DateTime? battlePassPurchaseDate;
   final Map<String, dynamic>? stats;
-  final List<String>? achievements;
-  final String? clanId;
+  final Map<String, dynamic>? preferences;
+  final List<String>? friends;
 
   User({
-    this.id,
+    required this.id,
     required this.username,
-    this.displayName,
     required this.email,
+    this.phoneNumber,
     this.avatarUrl,
-    this.level = 1,
-    this.experiencePoints = 0,
-    this.coins = 0,
-    this.isPremium = false,
+    required this.tokens,
+    required this.level,
+    required this.xp,
+    required this.isOnline,
+    required this.joinDate,
+    this.hasPremiumBattlePass = false,
+    this.battlePassPurchaseDate,
     this.stats,
-    this.achievements,
-    this.clanId,
+    this.preferences,
+    this.friends,
   });
 
-  User.empty()
-      : id = null,
-        username = '',
-        displayName = null,
-        email = '',
-        avatarUrl = null,
-        level = 1,
-        experiencePoints = 0,
-        coins = 0,
-        isPremium = false,
-        stats = null,
-        achievements = null,
-        clanId = null;
-
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['id'],
-      username: json['username'] ?? '',
-      displayName: json['display_name'],
-      email: json['email'] ?? '',
-      avatarUrl: json['avatar_url'],
-      level: json['level'] ?? 1,
-      experiencePoints: json['experience_points'] ?? 0,
-      coins: json['coins'] ?? 0,
-      isPremium: json['is_premium'] ?? false,
-      stats: json['stats'],
-      achievements: json['achievements'] != null
-          ? List<String>.from(json['achievements'])
-          : null,
-      clanId: json['clan_id'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'username': username,
-      'display_name': displayName,
-      'email': email,
-      'avatar_url': avatarUrl,
-      'level': level,
-      'experience_points': experiencePoints,
-      'coins': coins,
-      'is_premium': isPremium,
-      'stats': stats,
-      'achievements': achievements,
-      'clan_id': clanId,
-    };
-  }
-
+  // Create a copy with updated fields
   User copyWith({
-    int? id,
+    String? id,
     String? username,
-    String? displayName,
     String? email,
+    String? phoneNumber,
     String? avatarUrl,
+    int? tokens,
     int? level,
-    int? experiencePoints,
-    int? coins,
-    bool? isPremium,
+    int? xp,
+    bool? isOnline,
+    DateTime? joinDate,
+    bool? hasPremiumBattlePass,
+    DateTime? battlePassPurchaseDate,
     Map<String, dynamic>? stats,
-    List<String>? achievements,
-    String? clanId,
+    Map<String, dynamic>? preferences,
+    List<String>? friends,
   }) {
     return User(
       id: id ?? this.id,
       username: username ?? this.username,
-      displayName: displayName ?? this.displayName,
       email: email ?? this.email,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      tokens: tokens ?? this.tokens,
       level: level ?? this.level,
-      experiencePoints: experiencePoints ?? this.experiencePoints,
-      coins: coins ?? this.coins,
-      isPremium: isPremium ?? this.isPremium,
+      xp: xp ?? this.xp,
+      isOnline: isOnline ?? this.isOnline,
+      joinDate: joinDate ?? this.joinDate,
+      hasPremiumBattlePass: hasPremiumBattlePass ?? this.hasPremiumBattlePass,
+      battlePassPurchaseDate: battlePassPurchaseDate ?? this.battlePassPurchaseDate,
       stats: stats ?? this.stats,
-      achievements: achievements ?? this.achievements,
-      clanId: clanId ?? this.clanId,
+      preferences: preferences ?? this.preferences,
+      friends: friends ?? this.friends,
     );
+  }
+
+  // Create from JSON
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] ?? '',
+      username: json['username'] ?? 'Player',
+      email: json['email'] ?? '',
+      phoneNumber: json['phoneNumber'],
+      avatarUrl: json['avatarUrl'],
+      tokens: json['tokens'] ?? 0,
+      level: json['level'] ?? 1,
+      xp: json['xp'] ?? 0,
+      isOnline: json['isOnline'] ?? false,
+      joinDate: json['joinDate'] != null
+          ? DateTime.parse(json['joinDate'])
+          : DateTime.now(),
+      hasPremiumBattlePass: json['hasPremiumBattlePass'] ?? false,
+      battlePassPurchaseDate: json['battlePassPurchaseDate'] != null
+          ? DateTime.parse(json['battlePassPurchaseDate'])
+          : null,
+      stats: json['stats'],
+      preferences: json['preferences'],
+      friends: json['friends'] != null
+          ? List<String>.from(json['friends'])
+          : null,
+    );
+  }
+
+  // Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'email': email,
+      'phoneNumber': phoneNumber,
+      'avatarUrl': avatarUrl,
+      'tokens': tokens,
+      'level': level,
+      'xp': xp,
+      'isOnline': isOnline,
+      'joinDate': joinDate.toIso8601String(),
+      'hasPremiumBattlePass': hasPremiumBattlePass,
+      'battlePassPurchaseDate': battlePassPurchaseDate?.toIso8601String(),
+      'stats': stats,
+      'preferences': preferences,
+      'friends': friends,
+    };
   }
 }
