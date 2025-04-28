@@ -613,6 +613,1131 @@ app.get('/register', (req, res) => {
 
 // Tournaments page route
 app.get('/tournaments', (req, res) => {
+  res.send(tournamentsPage);
+});
+
+app.get('/battle-pass', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Battle Pass - MindArena</title>
+      <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+      <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+      <style>
+        /* General styles */
+        body {
+          font-family: system-ui, -apple-system, sans-serif;
+          margin: 0;
+          padding: 0;
+          background: linear-gradient(135deg, #2D3436 0%, #000000 100%);
+          color: white;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+        a {
+          text-decoration: none;
+          color: inherit;
+        }
+        .container {
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+        }
+        .content {
+          flex: 1;
+          padding: 32px;
+          max-width: 1200px;
+          margin: 0 auto;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .button {
+          display: inline-block;
+          background-color: #6C5CE7;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 8px;
+          text-decoration: none;
+          font-weight: bold;
+          transition: all 0.3s ease;
+          border: none;
+          cursor: pointer;
+        }
+        .button:hover {
+          background-color: #5A49DB;
+          transform: translateY(-2px);
+        }
+        .button:disabled {
+          background-color: #6C5CE7;
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .button-secondary {
+          background-color: transparent;
+          border: 1px solid #6C5CE7;
+        }
+        .button-secondary:hover {
+          background-color: rgba(108, 92, 231, 0.1);
+        }
+        .button-success {
+          background-color: #00b894;
+        }
+        .button-success:hover {
+          background-color: #00a584;
+        }
+        
+        /* Nav bar styles */
+        .navbar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 32px;
+          background-color: rgba(0, 0, 0, 0.2);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .logo {
+          font-size: 24px;
+          font-weight: bold;
+          color: white;
+          display: flex;
+          align-items: center;
+        }
+        .logo-icon {
+          width: 36px;
+          height: 36px;
+          background-color: #6C5CE7;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-right: 8px;
+        }
+        .nav-links {
+          display: flex;
+          gap: 16px;
+        }
+        .nav-link {
+          padding: 8px 16px;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+        .nav-link.active {
+          background-color: rgba(108, 92, 231, 0.2);
+          color: #6C5CE7;
+        }
+        .profile-menu {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+        .profile-avatar {
+          width: 40px;
+          height: 40px;
+          background-color: #6C5CE7;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+        }
+        .profile-name {
+          font-weight: bold;
+        }
+        .logout-button {
+          padding: 8px 16px;
+          font-size: 14px;
+        }
+        
+        /* Battle Pass specific styles */
+        .battle-pass-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 32px;
+        }
+        .battle-pass-info {
+          max-width: 600px;
+        }
+        .page-title {
+          margin: 0 0 8px 0;
+          font-size: 32px;
+        }
+        .season-name {
+          color: #6C5CE7;
+          font-weight: bold;
+          margin-bottom: 8px;
+        }
+        .season-dates {
+          color: #B2BEC3;
+          margin-bottom: 16px;
+        }
+        .season-description {
+          line-height: 1.5;
+          margin-bottom: 24px;
+        }
+        .token-balance {
+          display: flex;
+          align-items: center;
+          margin-bottom: 16px;
+          padding: 16px;
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .token-icon {
+          display: flex;
+          margin-right: 16px;
+        }
+        .token-details {
+          flex: 1;
+        }
+        .token-balance-text {
+          color: #B2BEC3;
+          margin-bottom: 4px;
+        }
+        .token-amount {
+          font-size: 24px;
+          font-weight: bold;
+        }
+        .action-buttons {
+          display: flex;
+          gap: 16px;
+        }
+        .premium-status {
+          padding: 16px;
+          background-color: rgba(108, 92, 231, 0.1);
+          border-radius: 8px;
+          margin-bottom: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .premium-status-icon {
+          width: 40px;
+          height: 40px;
+          background-color: #6C5CE7;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-right: 16px;
+        }
+        .premium-status-free {
+          background-color: rgba(108, 92, 231, 0.2);
+        }
+        .premium-info-wrapper {
+          flex: 1;
+        }
+        .premium-info {
+          display: flex;
+          align-items: center;
+        }
+        .premium-status-title {
+          font-weight: bold;
+          margin-bottom: 4px;
+        }
+        .premium-status-description {
+          color: #B2BEC3;
+          font-size: 14px;
+          margin-right: 16px;
+        }
+        .progress-section {
+          margin-bottom: 32px;
+        }
+        .progress-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+        .level-display {
+          font-size: 24px;
+          font-weight: bold;
+        }
+        .xp-info {
+          color: #B2BEC3;
+        }
+        .progress-container {
+          height: 24px;
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 12px;
+          overflow: hidden;
+          position: relative;
+        }
+        .progress-bar {
+          height: 100%;
+          background: linear-gradient(90deg, #6C5CE7 0%, #8E67E7 100%);
+          border-radius: 12px;
+          transition: width 0.3s ease;
+        }
+        .xp-actions {
+          display: flex;
+          gap: 16px;
+          margin-top: 16px;
+        }
+        .rewards-section {
+          margin-bottom: 32px;
+        }
+        .rewards-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+        }
+        .section-title {
+          font-size: 24px;
+          font-weight: bold;
+          margin: 0;
+        }
+        .rewards-toggle {
+          display: flex;
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        .toggle-option {
+          padding: 8px 16px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+        .toggle-option.active {
+          background-color: #6C5CE7;
+          color: white;
+        }
+        .rewards-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 16px;
+        }
+        .reward-card {
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 8px;
+          padding: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          transition: all 0.3s ease;
+          position: relative;
+        }
+        .reward-card:hover {
+          transform: translateY(-2px);
+          border-color: rgba(108, 92, 231, 0.5);
+        }
+        .reward-locked {
+          opacity: 0.5;
+        }
+        .reward-premium {
+          border-color: #F1C40F;
+        }
+        .reward-claimed::after {
+          content: '✓';
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 20px;
+          height: 20px;
+          background-color: #00b894;
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: bold;
+        }
+        .reward-level {
+          background-color: #6C5CE7;
+          color: white;
+          border-radius: 4px;
+          padding: 4px 8px;
+          font-size: 12px;
+          font-weight: bold;
+          display: inline-block;
+          margin-bottom: 8px;
+        }
+        .reward-premium .reward-level {
+          background-color: #F1C40F;
+          color: #2D3436;
+        }
+        .reward-name {
+          font-weight: bold;
+          margin-bottom: 8px;
+        }
+        .reward-icon {
+          width: 60px;
+          height: 60px;
+          background-color: rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          margin: 8px auto;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .reward-icon svg {
+          width: 32px;
+          height: 32px;
+          fill: #B2BEC3;
+        }
+        .reward-premium .reward-icon {
+          background-color: rgba(241, 196, 15, 0.1);
+        }
+        .reward-premium .reward-icon svg {
+          fill: #F1C40F;
+        }
+        .reward-button {
+          width: 100%;
+          padding: 8px;
+          margin-top: 8px;
+          font-size: 14px;
+        }
+        .empty-state {
+          text-align: center;
+          padding: 32px;
+        }
+        .empty-state svg {
+          width: 64px;
+          height: 64px;
+          margin-bottom: 16px;
+          fill: #B2BEC3;
+        }
+        .empty-state-title {
+          font-size: 20px;
+          margin-bottom: 8px;
+        }
+        .empty-state-description {
+          color: #B2BEC3;
+          margin-bottom: 24px;
+          max-width: 400px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        
+        /* Toast notification */
+        .toast {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          padding: 16px;
+          background-color: #2D3436;
+          border-left: 4px solid #6C5CE7;
+          border-radius: 4px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          display: flex;
+          align-items: center;
+          min-width: 300px;
+          transform: translateY(100px);
+          opacity: 0;
+          visibility: hidden;
+          transition: all 0.3s ease;
+          z-index: 1000;
+        }
+        .toast.show {
+          transform: translateY(0);
+          opacity: 1;
+          visibility: visible;
+        }
+        .toast-success {
+          border-color: #00b894;
+        }
+        .toast-error {
+          border-color: #d63031;
+        }
+        .toast-icon {
+          margin-right: 12px;
+          width: 24px;
+          height: 24px;
+          background-color: #6C5CE7;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .toast-success .toast-icon {
+          background-color: #00b894;
+        }
+        .toast-error .toast-icon {
+          background-color: #d63031;
+        }
+        .toast-message {
+          flex: 1;
+        }
+        .toast-close {
+          background: none;
+          border: none;
+          color: #B2BEC3;
+          cursor: pointer;
+          font-size: 16px;
+          margin-left: 12px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="navbar">
+          <a href="/" class="logo">
+            <div class="logo-icon">M</div>
+            MindArena
+          </a>
+          
+          <div class="nav-links">
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+            <a href="#" class="nav-link">Play Now</a>
+            <a href="/tournaments" class="nav-link">Tournaments</a>
+            <a href="/battle-pass" class="nav-link active">Battle Pass</a>
+            <a href="#" class="nav-link">Leaderboard</a>
+          </div>
+          
+          <div class="profile-menu">
+            <div class="profile-avatar" id="profileInitial">?</div>
+            <div class="profile-name" id="profileName">...</div>
+            <button class="button logout-button" onclick="handleLogout()">Logout</button>
+          </div>
+        </div>
+        
+        <div class="content">
+          <div class="battle-pass-header">
+            <div class="battle-pass-info">
+              <h1 class="page-title">Battle Pass</h1>
+              <div class="season-name" id="seasonName">Season 1: Mind Mastery</div>
+              <div class="season-dates" id="seasonDates">April 1 - April 30, 2025</div>
+              <div class="season-description" id="seasonDescription">Begin your journey through the realms of knowledge and earn exclusive rewards.</div>
+            </div>
+            
+            <div class="token-balance">
+              <div class="token-info">
+                <div class="token-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
+                    <path d="M0 0h24v24H0V0z" fill="none"/>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z"/>
+                  </svg>
+                </div>
+                <div class="token-details">
+                  <div class="token-balance-text">Your Token Balance</div>
+                  <div class="token-amount" id="tokenBalance">0</div>
+                </div>
+              </div>
+              <div class="action-buttons">
+                <button class="button" onclick="addTokens()">Add Tokens</button>
+              </div>
+            </div>
+          </div>
+          
+          <div id="premiumStatusSection" class="premium-status">
+            <div class="premium-info">
+              <div class="premium-status-icon premium-status-free" id="premiumStatusIcon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="24" height="24">
+                  <path d="M0 0h24v24H0V0z" fill="none"/>
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z"/>
+                </svg>
+              </div>
+              <div class="premium-info-wrapper">
+                <div class="premium-status-title" id="premiumStatusTitle">Free Battle Pass</div>
+                <div class="premium-status-description" id="premiumStatusDescription">Upgrade to Premium to unlock exclusive rewards</div>
+              </div>
+            </div>
+            <button class="button" id="upgradeButton" onclick="upgradeToPremium()">Upgrade to Premium (500 Tokens)</button>
+          </div>
+          
+          <div class="progress-section">
+            <div class="progress-info">
+              <div class="level-display">Level <span id="currentLevel">1</span></div>
+              <div class="xp-info"><span id="currentXP">0</span>/<span id="xpPerLevel">1000</span> XP to Level <span id="nextLevel">2</span></div>
+            </div>
+            <div class="progress-container">
+              <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+            </div>
+            <div class="xp-actions">
+              <button class="button button-secondary" onclick="simulateXP('dailyLogin')">Simulate Daily Login (+50 XP)</button>
+              <button class="button button-secondary" onclick="simulateXP('matchWin')">Simulate Match Win (+100 XP)</button>
+              <button class="button button-secondary" onclick="simulateXP('tournamentWin')">Simulate Tournament Win (+500 XP)</button>
+            </div>
+          </div>
+          
+          <div class="rewards-section">
+            <div class="rewards-header">
+              <h2 class="section-title">Battle Pass Rewards</h2>
+              <div class="rewards-toggle">
+                <div class="toggle-option active" onclick="filterRewards('all')">All Rewards</div>
+                <div class="toggle-option" onclick="filterRewards('available')">Available</div>
+                <div class="toggle-option" onclick="filterRewards('claimed')">Claimed</div>
+              </div>
+            </div>
+            
+            <div id="rewardsGrid" class="rewards-grid">
+              <!-- Rewards will be dynamically inserted here -->
+              <!-- Loading placeholder -->
+              <div class="reward-card">
+                <div class="reward-level">Loading...</div>
+                <div class="reward-name">Loading...</div>
+                <div class="reward-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M0 0h24v24H0V0z" fill="none"/>
+                    <path d="M18 13h-5v5h-2v-5H6v-2h5V6h2v5h5v2z"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div id="emptyState" class="empty-state" style="display: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M0 0h24v24H0z" fill="none"/>
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-9-1h4v-4h-4v4zm0-6h4V8h-4v4z"/>
+            </svg>
+            <h3 class="empty-state-title">No Rewards Found</h3>
+            <p class="empty-state-description">There are no rewards matching your current filter. Please try a different filter or level up to unlock more rewards.</p>
+            <button class="button" onclick="filterRewards('all')">View All Rewards</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Toast Notification -->
+      <div id="toast" class="toast">
+        <div class="toast-icon">✓</div>
+        <div class="toast-message" id="toastMessage">Operation successful!</div>
+        <button class="toast-close" onclick="hideToast()">&times;</button>
+      </div>
+      
+      <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+          apiKey: '${process.env.VITE_FIREBASE_API_KEY || "demo-api-key"}',
+          authDomain: '${process.env.VITE_FIREBASE_PROJECT_ID || "demo-project"}.firebaseapp.com',
+          projectId: '${process.env.VITE_FIREBASE_PROJECT_ID || "demo-project"}',
+          storageBucket: '${process.env.VITE_FIREBASE_PROJECT_ID || "demo-project"}.appspot.com',
+          appId: '${process.env.VITE_FIREBASE_APP_ID || "demo-app-id"}'
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        
+        // Global variables
+        let currentUser = null;
+        let userProgress = null;
+        let battlePassInfo = null;
+        let rewards = [];
+        let filteredRewards = [];
+        let currentFilter = 'all';
+        
+        // Check if user is logged in, if not redirect to home page
+        firebase.auth().onAuthStateChanged((user) => {
+          if (user) {
+            // User is signed in
+            console.log('Battle Pass: User is signed in:', user.displayName || user.email);
+            currentUser = user;
+            updateUserInterface(user);
+            loadUserTokens(user.uid);
+            loadBattlePassInfo();
+            loadUserProgress(user.uid);
+          } else {
+            // No user is signed in, redirect to home
+            console.log('No user is signed in, redirecting to home');
+            window.location.href = '/';
+          }
+        });
+        
+        // Update UI with user info
+        function updateUserInterface(user) {
+          // Show username in greeting
+          const profileName = document.getElementById('profileName');
+          const profileInitial = document.getElementById('profileInitial');
+          
+          const displayName = user.displayName || user.email || 'Player';
+          profileName.textContent = displayName;
+          
+          // Show user initial in avatar
+          if (displayName) {
+            profileInitial.textContent = displayName.charAt(0).toUpperCase();
+          }
+        }
+        
+        // Handle logout
+        function handleLogout() {
+          firebase.auth().signOut()
+            .then(() => {
+              // Sign-out successful, redirect to home
+              window.location.href = '/';
+            })
+            .catch((error) => {
+              // An error happened
+              console.error('Logout error:', error);
+              showToast('error', 'Error during logout. Please try again.');
+            });
+        }
+        
+        // Load user token balance
+        function loadUserTokens(userId) {
+          fetch('/api/user/' + userId + '/tokens')
+            .then(response => response.json())
+            .then(data => {
+              document.getElementById('tokenBalance').textContent = data.balance;
+            })
+            .catch(error => {
+              console.error('Error fetching token balance:', error);
+            });
+        }
+        
+        // Add tokens to user (demo/testing functionality)
+        function addTokens() {
+          if (!currentUser) return;
+          
+          const amount = prompt('Enter amount of tokens to add:');
+          
+          if (!amount || isNaN(amount) || parseInt(amount) <= 0) {
+            showToast('error', 'Please enter a valid positive number.');
+            return;
+          }
+          
+          fetch('/api/user/' + currentUser.uid + '/tokens/add', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ amount: parseInt(amount) })
+          })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                document.getElementById('tokenBalance').textContent = data.newBalance;
+                showToast('success', 'Successfully added ' + data.added + ' tokens!');
+              } else {
+                showToast('error', data.error || 'Failed to add tokens.');
+              }
+            })
+            .catch(error => {
+              console.error('Error adding tokens:', error);
+              showToast('error', 'Failed to add tokens. Please try again.');
+            });
+        }
+        
+        // Load battle pass information
+        function loadBattlePassInfo() {
+          fetch('/api/battle-pass')
+            .then(response => response.json())
+            .then(data => {
+              battlePassInfo = data.currentSeason;
+              
+              // Update UI with season info
+              document.getElementById('seasonName').textContent = battlePassInfo.name;
+              
+              // Format dates
+              const startDate = new Date(battlePassInfo.startDate);
+              const endDate = new Date(battlePassInfo.endDate);
+              const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+              const formattedStartDate = startDate.toLocaleDateString('en-US', dateOptions);
+              const formattedEndDate = endDate.toLocaleDateString('en-US', dateOptions);
+              document.getElementById('seasonDates').textContent = \`\${formattedStartDate} - \${formattedEndDate}\`;
+              
+              document.getElementById('seasonDescription').textContent = battlePassInfo.description;
+              document.getElementById('xpPerLevel').textContent = battlePassInfo.xpPerLevel;
+              document.getElementById('upgradeButton').textContent = \`Upgrade to Premium (\${battlePassInfo.premiumPrice} Tokens)\`;
+              
+              // Load rewards
+              loadRewards();
+            })
+            .catch(error => {
+              console.error('Error fetching battle pass info:', error);
+              showToast('error', 'Failed to load battle pass information. Please try again.');
+            });
+        }
+        
+        // Load user battle pass progress
+        function loadUserProgress(userId) {
+          fetch('/api/user/' + userId + '/battle-pass')
+            .then(response => response.json())
+            .then(data => {
+              userProgress = data.progress;
+              rewards = data.rewards;
+              
+              // Update progress UI
+              updateProgressUI();
+              
+              // Update premium status UI
+              updatePremiumStatusUI();
+              
+              // Render rewards
+              renderRewards();
+            })
+            .catch(error => {
+              console.error('Error fetching user progress:', error);
+              showToast('error', 'Failed to load your battle pass progress. Please try again.');
+            });
+        }
+        
+        // Load rewards
+        function loadRewards() {
+          fetch('/api/battle-pass/rewards')
+            .then(response => response.json())
+            .then(data => {
+              if (!userProgress) {
+                // Save rewards but don't render until we have user progress
+                rewards = data.rewards;
+              }
+            })
+            .catch(error => {
+              console.error('Error fetching rewards:', error);
+              showToast('error', 'Failed to load rewards. Please try again.');
+            });
+        }
+        
+        // Update progress UI
+        function updateProgressUI() {
+          document.getElementById('currentLevel').textContent = userProgress.level;
+          document.getElementById('nextLevel').textContent = Math.min(userProgress.level + 1, battlePassInfo.maxLevel);
+          document.getElementById('currentXP').textContent = userProgress.xp;
+          
+          // Update progress bar
+          const progressPercent = userProgress.percentToNextLevel;
+          document.getElementById('progressBar').style.width = progressPercent + '%';
+        }
+        
+        // Update premium status UI
+        function updatePremiumStatusUI() {
+          const premiumStatusSection = document.getElementById('premiumStatusSection');
+          const premiumStatusIcon = document.getElementById('premiumStatusIcon');
+          const premiumStatusTitle = document.getElementById('premiumStatusTitle');
+          const premiumStatusDescription = document.getElementById('premiumStatusDescription');
+          const upgradeButton = document.getElementById('upgradeButton');
+          
+          if (userProgress.isPremium) {
+            premiumStatusSection.style.backgroundColor = 'rgba(241, 196, 15, 0.1)';
+            premiumStatusIcon.classList.remove('premium-status-free');
+            premiumStatusIcon.innerHTML = \`
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F1C40F" width="24" height="24">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.17-9.41l-5.07 5.07-2.83-2.83 1.41-1.41 1.42 1.42L15.34 10l1.41 1.41-1.42 1.18z"/>
+              </svg>
+            \`;
+            premiumStatusTitle.textContent = 'Premium Battle Pass';
+            premiumStatusDescription.textContent = 'You have access to all premium rewards';
+            upgradeButton.style.display = 'none';
+          } else {
+            premiumStatusSection.style.backgroundColor = 'rgba(108, 92, 231, 0.1)';
+            premiumStatusIcon.classList.add('premium-status-free');
+            premiumStatusIcon.innerHTML = \`
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="24" height="24">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z"/>
+              </svg>
+            \`;
+            premiumStatusTitle.textContent = 'Free Battle Pass';
+            premiumStatusDescription.textContent = 'Upgrade to Premium to unlock exclusive rewards';
+            upgradeButton.style.display = 'block';
+          }
+        }
+        
+        // Render rewards
+        function renderRewards() {
+          const rewardsGrid = document.getElementById('rewardsGrid');
+          
+          // Filter rewards based on current filter
+          filterRewards(currentFilter);
+          
+          if (filteredRewards.length === 0) {
+            document.getElementById('emptyState').style.display = 'block';
+            rewardsGrid.style.display = 'none';
+            return;
+          }
+          
+          document.getElementById('emptyState').style.display = 'none';
+          rewardsGrid.style.display = 'grid';
+          
+          // Clear grid
+          rewardsGrid.innerHTML = '';
+          
+          // Add reward cards
+          filteredRewards.forEach(reward => {
+            const isFree = !reward.free.claimed;
+            const isPremium = !reward.premium.claimed && userProgress.isPremium;
+            
+            // Free reward
+            rewardsGrid.appendChild(createRewardCard(reward.level, reward.free, 'free', reward.free.available, reward.free.claimed));
+            
+            // Premium reward
+            rewardsGrid.appendChild(createRewardCard(reward.level, reward.premium, 'premium', reward.premium.available, reward.premium.claimed));
+          });
+        }
+        
+        // Create reward card
+        function createRewardCard(level, reward, type, available, claimed) {
+          const card = document.createElement('div');
+          card.className = 'reward-card';
+          
+          if (type === 'premium') {
+            card.classList.add('reward-premium');
+          }
+          
+          if (!available) {
+            card.classList.add('reward-locked');
+          }
+          
+          if (claimed) {
+            card.classList.add('reward-claimed');
+          }
+          
+          let iconSvg = '';
+          
+          // Choose icon based on reward type
+          switch(reward.type) {
+            case 'tokens':
+              iconSvg = \`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M0 0h24v24H0V0z" fill="none"/>
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z"/>
+                </svg>
+              \`;
+              break;
+            case 'avatar':
+              iconSvg = \`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M0 0h24v24H0V0z" fill="none"/>
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm0 3c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm0 4.9c-2.97 0-5.1-1.55-5.9-2.9h11.8c-.8 1.35-2.93 2.9-5.9 2.9z"/>
+                </svg>
+              \`;
+              break;
+            case 'profile_frame':
+              iconSvg = \`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M0 0h24v24H0V0z" fill="none"/>
+                  <path d="M3 3v18h18V3H3zm16 16H5V5h14v14zm-5.5-7.5h-2v-3h-3V11h3v3h2v-3h3V8.5h-3z"/>
+                </svg>
+              \`;
+              break;
+            case 'title':
+              iconSvg = \`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M0 0h24v24H0V0z" fill="none"/>
+                  <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v4H6zm3 0h8v1h-8zm0 3h8v1h-8z"/>
+                </svg>
+              \`;
+              break;
+            case 'special_effect':
+              iconSvg = \`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M0 0h24v24H0V0z" fill="none"/>
+                  <path d="M11.5 7v7.96c0 .14.1.19.15.1l1.54-2.77c.03-.07.08-.09.15-.09h1.81c.07 0 .12.02.15.09l1.54 2.77c.05.09.15.04.15-.1V7c0-.06.04-.1.1-.1h1.81c.06 0 .1.04.1.1v10c0 .06-.04.1-.1.1h-1.91c-.07 0-.12-.02-.15-.09l-2.14-3.86c-.03-.07-.1-.07-.15 0l-2.14 3.86c-.03.07-.08.09-.15.09H9.5c-.06 0-.1-.04-.1-.1V7.1c0-.06.04-.1.1-.1h1.91c.05 0 .09.04.09.1zm-5 2v6c0 .06-.04.1-.1.1H4.6c-.06 0-.1-.04-.1-.1v-6c0-.06.04-.1.1-.1h1.8c.06 0 .1.04.1.1zm0-4v1c0 .06-.04.1-.1.1H4.6c-.06 0-.1-.04-.1-.1v-1c0-.06.04-.1.1-.1h1.8c.06 0 .1.04.1.1z"/>
+                </svg>
+              \`;
+              break;
+            default:
+              iconSvg = \`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M0 0h24v24H0V0z" fill="none"/>
+                  <path d="M19 5h-2V3H7v2H5v14h14V5zm-2 12H7V7h10v10z"/>
+                </svg>
+              \`;
+          }
+          
+          card.innerHTML = \`
+            <div class="reward-level">Level \${level}</div>
+            <div class="reward-name">\${reward.name}</div>
+            <div class="reward-icon">
+              \${iconSvg}
+            </div>
+            <button class="button reward-button" 
+                  onclick="claimReward(\${level}, \${type === 'premium'})" 
+                  \${!available || claimed ? 'disabled' : ''}>
+              \${claimed ? 'Claimed' : available ? 'Claim' : 'Locked'}
+            </button>
+          \`;
+          
+          return card;
+        }
+        
+        // Filter rewards
+        function filterRewards(filter) {
+          currentFilter = filter;
+          
+          // Update active filter in UI
+          document.querySelectorAll('.toggle-option').forEach(option => {
+            option.classList.remove('active');
+          });
+          document.querySelector(\`.toggle-option[onclick="filterRewards('\${filter}')"]\`).classList.add('active');
+          
+          if (!rewards || rewards.length === 0) {
+            filteredRewards = [];
+            return;
+          }
+          
+          switch(filter) {
+            case 'available':
+              filteredRewards = rewards.filter(reward => 
+                (reward.free.available && !reward.free.claimed) || 
+                (reward.premium.available && !reward.premium.claimed)
+              );
+              break;
+            case 'claimed':
+              filteredRewards = rewards.filter(reward => 
+                reward.free.claimed || reward.premium.claimed
+              );
+              break;
+            case 'all':
+            default:
+              filteredRewards = [...rewards];
+              break;
+          }
+          
+          // Render if we already have rewards loaded
+          if (document.getElementById('rewardsGrid').childElementCount > 0) {
+            renderRewards();
+          }
+        }
+        
+        // Claim reward
+        function claimReward(level, isPremium) {
+          if (!currentUser) return;
+          
+          fetch('/api/user/' + currentUser.uid + '/battle-pass/claim-reward', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ level, isPremium })
+          })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                showToast('success', data.message);
+                
+                // If token reward, update balance
+                if (data.reward && data.reward.newBalance !== undefined) {
+                  document.getElementById('tokenBalance').textContent = data.reward.newBalance;
+                }
+                
+                // Refresh user progress to update claimed rewards
+                loadUserProgress(currentUser.uid);
+              } else {
+                showToast('error', data.error || 'Failed to claim reward.');
+              }
+            })
+            .catch(error => {
+              console.error('Error claiming reward:', error);
+              showToast('error', 'Failed to claim reward. Please try again.');
+            });
+        }
+        
+        // Upgrade to premium battle pass
+        function upgradeToPremium() {
+          if (!currentUser) return;
+          
+          // Confirm upgrade
+          if (!confirm('Are you sure you want to upgrade to Premium Battle Pass for ' + battlePassInfo.premiumPrice + ' tokens?')) {
+            return;
+          }
+          
+          fetch('/api/user/' + currentUser.uid + '/battle-pass/upgrade', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                showToast('success', data.message);
+                document.getElementById('tokenBalance').textContent = data.newBalance;
+                
+                // Update premium status
+                userProgress.isPremium = true;
+                updatePremiumStatusUI();
+                
+                // Refresh rewards to show premium ones as available
+                loadUserProgress(currentUser.uid);
+              } else {
+                showToast('error', data.error || 'Failed to upgrade to premium.');
+              }
+            })
+            .catch(error => {
+              console.error('Error upgrading to premium:', error);
+              showToast('error', 'Failed to upgrade to premium. Please try again.');
+            });
+        }
+        
+        // Simulate earning XP (for demo purposes)
+        function simulateXP(source) {
+          if (!currentUser) return;
+          
+          // Get XP amount based on source
+          let amount = 50; // default
+          switch(source) {
+            case 'matchWin':
+              amount = 100;
+              break;
+            case 'tournamentWin':
+              amount = 500;
+              break;
+            case 'dailyLogin':
+            default:
+              amount = 50;
+              break;
+          }
+          
+          fetch('/api/user/' + currentUser.uid + '/battle-pass/add-xp', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ amount, source })
+          })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                if (data.levelUp) {
+                  showToast('success', \`Congratulations! You leveled up from \${data.oldLevel} to \${data.newLevel}!\`);
+                } else {
+                  showToast('success', \`You earned \${data.xpAdded} XP from \${source}!\`);
+                }
+                
+                // Refresh user progress
+                loadUserProgress(currentUser.uid);
+              } else {
+                showToast('error', data.error || 'Failed to add XP.');
+              }
+            })
+            .catch(error => {
+              console.error('Error adding XP:', error);
+              showToast('error', 'Failed to add XP. Please try again.');
+            });
+        }
+        
+        // Show toast notification
+        function showToast(type, message) {
+          const toast = document.getElementById('toast');
+          const toastMessage = document.getElementById('toastMessage');
+          
+          // Set message
+          toastMessage.textContent = message;
+          
+          // Set type
+          toast.className = 'toast';
+          toast.classList.add(\`toast-\${type}\`);
+          
+          // Show toast
+          toast.classList.add('show');
+          
+          // Hide after 3 seconds
+          setTimeout(() => {
+            hideToast();
+          }, 3000);
+        }
+        
+        // Hide toast notification
+        function hideToast() {
+          const toast = document.getElementById('toast');
+          toast.classList.remove('show');
+        }
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+app.get('/tournaments', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html lang="en">
