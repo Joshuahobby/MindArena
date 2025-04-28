@@ -801,6 +801,11 @@ firebase.initializeApp(firebaseConfig);
 app.use(cors());
 app.use(express.json());
 
+// Initialize Flutterwave
+const FLUTTERWAVE_SECRET_KEY = process.env.FLUTTERWAVE_SECRET_KEY || 'FLUTTERWAVE_SECRET_KEY';
+const FLUTTERWAVE_PUBLIC_KEY = process.env.FLUTTERWAVE_PUBLIC_KEY || 'FLUTTERWAVE_PUBLIC_KEY';
+const FLUTTERWAVE_API_URL = 'https://api.flutterwave.com/v3';
+
 // Serve static files (if needed later)
 // app.use(express.static(path.join(__dirname, 'public')));
 
@@ -8918,6 +8923,173 @@ wss.on('connection', (ws) => {
     console.log('WebSocket connection closed');
   });
 });
+
+// Payment API Endpoints
+
+// Verify Flutterwave payment
+app.post('/api/verify-payment', async (req, res) => {
+  try {
+    const { txRef, transactionId, purchaseType, productId, amount } = req.body;
+    
+    if (!txRef || !transactionId || !purchaseType || !productId || !amount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required payment information'
+      });
+    }
+    
+    // Verify transaction with Flutterwave API
+    const verifyUrl = `${FLUTTERWAVE_API_URL}/transactions/${transactionId}/verify`;
+    
+    // Use Node.js built-in fetch
+    const https = require('https');
+    
+    // Use a Promise-based approach with https
+    const data = await new Promise((resolve, reject) => {
+      const options = {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${FLUTTERWAVE_SECRET_KEY}`
+        }
+      };
+      
+      const req = https.request(verifyUrl, options, (res) => {
+        let responseData = '';
+        
+        res.on('data', (chunk) => {
+          responseData += chunk;
+        });
+        
+        res.on('end', () => {
+          try {
+            const parsedData = JSON.parse(responseData);
+            resolve(parsedData);
+          } catch (error) {
+            reject(new Error('Failed to parse response: ' + error.message));
+          }
+        });
+      });
+      
+      req.on('error', (error) => {
+        reject(error);
+      });
+      
+      req.end();
+    });
+    
+    if (data.status === 'success' && 
+        data.data.tx_ref === txRef && 
+        data.data.amount >= amount && 
+        data.data.currency === 'USD') {
+      
+      // Transaction is verified, process based on purchase type
+      if (purchaseType === 'token_purchase') {
+        // Get token amount from product ID
+        const tokenAmount = getTokenAmountFromPackage(productId);
+        if (!tokenAmount) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid token package'
+          });
+        }
+        
+        // Add tokens to user account
+        // Extract user ID from transaction reference or request
+        const userId = getUserIdFromReference(txRef);
+        if (!userId) {
+          return res.status(400).json({
+            success: false,
+            message: 'Could not identify user'
+          });
+        }
+        
+        // Add tokens to user's account
+        const success = await addTokens(userId, tokenAmount);
+        
+        return res.json({
+          success: true,
+          message: `Payment verified and ${tokenAmount} tokens added`,
+          data: {
+            tokens: tokenAmount,
+            transactionId
+          }
+        });
+      } 
+      else if (purchaseType === 'battle_pass_purchase') {
+        // Process battle pass purchase
+        const userId = getUserIdFromReference(txRef);
+        if (!userId) {
+          return res.status(400).json({
+            success: false,
+            message: 'Could not identify user'
+          });
+        }
+        
+        // Upgrade user to premium battle pass
+        const success = await upgradeToPremiumBattlePass(userId);
+        
+        return res.json({
+          success: true,
+          message: 'Payment verified and Battle Pass upgraded',
+          data: {
+            battlePassId: productId,
+            transactionId
+          }
+        });
+      }
+      else {
+        return res.status(400).json({
+          success: false,
+          message: 'Unknown purchase type'
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment verification failed',
+        data: data
+      });
+    }
+  } catch (error) {
+    console.error('Payment verification error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred during payment verification'
+    });
+  }
+});
+
+// Helper function to extract user ID from transaction reference
+function getUserIdFromReference(txRef) {
+  // Expected format: mind_arena_tokens_userId_uuid or mind_arena_bp_userId_uuid
+  try {
+    const parts = txRef.split('_');
+    if (parts.length >= 4) {
+      if (parts[0] === 'mind' && parts[1] === 'arena') {
+        // The third part might be 'tokens' or 'bp', so we'll check the fourth part
+        return parts[3]; // This assumes the user ID is the fourth part
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error('Error extracting user ID from reference:', e);
+    return null;
+  }
+}
+
+// Helper function to get token amount from package ID
+function getTokenAmountFromPackage(packageId) {
+  const tokenPackages = {
+    'tokens_100': 100,
+    'tokens_500': 500,
+    'tokens_1000': 1000,
+    'tokens_2500': 2500,
+    'tokens_5000': 5000
+  };
+  
+  return tokenPackages[packageId] || null;
+}
 
 // Start server
 server.listen(port, '0.0.0.0', () => {
