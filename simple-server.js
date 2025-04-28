@@ -24,6 +24,31 @@ app.use('/api/clans', clanRoutes);
 // Initialize WebSocket server
 const wss = new WebSocket.Server({ server, path: '/ws' });
 
+// Import clan routes properly
+try {
+  const clanRoutes = require('./server/clan-routes');
+  app.use('/api/clans', clanRoutes);
+} catch (error) {
+  console.error('Error loading clan routes:', error);
+}
+
+// Test endpoint for basic API functionality
+app.get('/api/test', async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      message: 'API is operational',
+      timestamp: new Date()
+    });
+  } catch (error) {
+    console.error('API test error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Common JavaScript for all pages to fix profile dropdown issues
 const commonJsForHead = `
 <script>
