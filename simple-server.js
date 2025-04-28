@@ -11,6 +11,780 @@ const app = express();
 const port = process.env.PORT || 5000;
 const server = http.createServer(app);
 
+// Initialize WebSocket server
+const wss = new WebSocket.Server({ server, path: '/ws' });
+
+// Store connected clients
+const clients = new Map();
+// Store users in matchmaking queue
+const matchmakingQueue = [];
+// Store active games
+const activeGames = new Map();
+// Store online user count
+let onlineUserCount = 0;
+
+// WebSocket connection handler
+wss.on('connection', (ws) => {
+  console.log('WebSocket client connected');
+  
+  // Generate a temporary client ID
+  const clientId = Date.now().toString();
+  clients.set(ws, {
+    id: clientId,
+    isAuthenticated: false,
+    userId: null,
+    username: null,
+    inMatchmaking: false,
+    inGame: false,
+    gameId: null
+  });
+  
+  // Update online user count
+  updateOnlineUserCount();
+  
+  // Message handler
+  ws.on('message', (messageBuffer) => {
+    try {
+      const message = JSON.parse(messageBuffer.toString());
+      handleClientMessage(ws, message);
+    } catch (error) {
+      console.error('Error parsing WebSocket message:', error);
+    }
+  });
+  
+  // Close handler
+  ws.on('close', () => {
+    const clientInfo = clients.get(ws);
+    if (clientInfo) {
+      console.log(`WebSocket client ${clientInfo.userId || clientInfo.id} disconnected`);
+      
+      // Remove from matchmaking queue if applicable
+      if (clientInfo.inMatchmaking) {
+        const index = matchmakingQueue.findIndex(item => item.userId === clientInfo.userId);
+        if (index !== -1) {
+          matchmakingQueue.splice(index, 1);
+        }
+      }
+      
+      // Handle game disconnect if in a game
+      if (clientInfo.inGame && clientInfo.gameId) {
+        handlePlayerDisconnect(clientInfo, clientInfo.gameId);
+      }
+      
+      // Remove client
+      clients.delete(ws);
+      
+      // Update online user count
+      updateOnlineUserCount();
+    }
+  });
+  
+  // Error handler
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
+});
+
+// Handle client messages
+function handleClientMessage(ws, message) {
+  const clientInfo = clients.get(ws);
+  if (!clientInfo) return;
+  
+  console.log('Received message:', message.type, 'from', clientInfo.username || clientInfo.id);
+  
+  switch (message.type) {
+    case 'auth':
+      // Authenticate the client
+      handleAuthentication(ws, clientInfo, message);
+      break;
+      
+    case 'get_online_users':
+      // Send online user count
+      sendOnlineUserCount(ws);
+      break;
+      
+    case 'find_match':
+      // Add to matchmaking queue
+      handleMatchmaking(ws, clientInfo);
+      break;
+      
+    case 'cancel_matchmaking':
+      // Remove from matchmaking queue
+      cancelMatchmaking(ws, clientInfo);
+      break;
+      
+    case 'matchmaking_status':
+      // Send matchmaking status
+      sendMatchmakingStatus(ws, clientInfo);
+      break;
+      
+    case 'submit_answer':
+      // Handle answer submission
+      handleAnswerSubmission(ws, clientInfo, message);
+      break;
+      
+    default:
+      console.log('Unknown message type:', message.type);
+  }
+}
+
+// Handle client authentication
+function handleAuthentication(ws, clientInfo, message) {
+  if (!message.userId) return;
+  
+  clientInfo.isAuthenticated = true;
+  clientInfo.userId = message.userId;
+  clientInfo.username = message.username || 'Player';
+  
+  clients.set(ws, clientInfo);
+  
+  console.log(`Client authenticated: ${clientInfo.username} (${clientInfo.userId})`);
+  
+  // Send confirmation
+  ws.send(JSON.stringify({
+    type: 'auth_success',
+    userId: clientInfo.userId,
+    username: clientInfo.username
+  }));
+  
+  // Send online user count
+  sendOnlineUserCount(ws);
+}
+
+// Update online user count
+function updateOnlineUserCount() {
+  // Count authenticated users
+  const authenticatedUsers = Array.from(clients.values()).filter(client => client.isAuthenticated);
+  onlineUserCount = authenticatedUsers.length;
+  
+  // Broadcast to all authenticated clients
+  broadcastMessage({
+    type: 'online_users',
+    count: onlineUserCount
+  });
+}
+
+// Send online user count to a client
+function sendOnlineUserCount(ws) {
+  ws.send(JSON.stringify({
+    type: 'online_users',
+    count: onlineUserCount
+  }));
+}
+
+// Handle matchmaking
+function handleMatchmaking(ws, clientInfo) {
+  if (!clientInfo.isAuthenticated) {
+    sendErrorMessage(ws, 'You must be authenticated to find a match');
+    return;
+  }
+  
+  if (clientInfo.inGame) {
+    sendErrorMessage(ws, 'You are already in a game');
+    return;
+  }
+  
+  if (clientInfo.inMatchmaking) {
+    sendErrorMessage(ws, 'You are already in the matchmaking queue');
+    return;
+  }
+  
+  // Add to matchmaking queue
+  clientInfo.inMatchmaking = true;
+  clients.set(ws, clientInfo);
+  
+  matchmakingQueue.push({
+    ws,
+    userId: clientInfo.userId,
+    username: clientInfo.username,
+    timestamp: Date.now()
+  });
+  
+  console.log(`Added ${clientInfo.username} to matchmaking queue. Queue size: ${matchmakingQueue.length}`);
+  
+  // Send matchmaking status
+  sendMatchmakingStatus(ws, clientInfo);
+  
+  // Try to find a match immediately
+  findMatches();
+}
+
+// Cancel matchmaking
+function cancelMatchmaking(ws, clientInfo) {
+  if (!clientInfo.inMatchmaking) return;
+  
+  // Remove from matchmaking queue
+  const index = matchmakingQueue.findIndex(item => item.userId === clientInfo.userId);
+  if (index !== -1) {
+    matchmakingQueue.splice(index, 1);
+  }
+  
+  // Update client info
+  clientInfo.inMatchmaking = false;
+  clients.set(ws, clientInfo);
+  
+  console.log(`Removed ${clientInfo.username} from matchmaking queue. Queue size: ${matchmakingQueue.length}`);
+  
+  // Send matchmaking status
+  sendMatchmakingStatus(ws, clientInfo);
+}
+
+// Send matchmaking status to a client
+function sendMatchmakingStatus(ws, clientInfo) {
+  if (!clientInfo.inMatchmaking) {
+    ws.send(JSON.stringify({
+      type: 'matchmaking_status',
+      status: 'idle'
+    }));
+    return;
+  }
+  
+  const queuePosition = matchmakingQueue.findIndex(item => item.userId === clientInfo.userId) + 1;
+  const waitTime = Math.floor((Date.now() - matchmakingQueue[queuePosition - 1].timestamp) / 1000);
+  
+  ws.send(JSON.stringify({
+    type: 'matchmaking_status',
+    status: 'searching',
+    message: `Looking for opponents... (${queuePosition} in queue, ${waitTime}s)`
+  }));
+}
+
+// Find matches among users in the matchmaking queue
+function findMatches() {
+  if (matchmakingQueue.length < 2) return;
+  
+  console.log('Finding matches for', matchmakingQueue.length, 'players in queue');
+  
+  // Sort queue by wait time (oldest first)
+  matchmakingQueue.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Match pairs of players
+  while (matchmakingQueue.length >= 2) {
+    const player1 = matchmakingQueue.shift();
+    const player2 = matchmakingQueue.shift();
+    
+    createGame(player1, player2);
+  }
+}
+
+// Create a new game between two players
+function createGame(player1, player2) {
+  // Create game ID
+  const gameId = `game_${Date.now()}`;
+  
+  console.log(`Creating game ${gameId} between ${player1.username} and ${player2.username}`);
+  
+  // Get client info for both players
+  const client1 = Array.from(clients.entries()).find(([_, client]) => client.userId === player1.userId);
+  const client2 = Array.from(clients.entries()).find(([_, client]) => client.userId === player2.userId);
+  
+  if (!client1 || !client2) {
+    console.error('Could not find client info for one or both players');
+    return;
+  }
+  
+  const [ws1, clientInfo1] = client1;
+  const [ws2, clientInfo2] = client2;
+  
+  // Update client info for both players
+  clientInfo1.inMatchmaking = false;
+  clientInfo1.inGame = true;
+  clientInfo1.gameId = gameId;
+  
+  clientInfo2.inMatchmaking = false;
+  clientInfo2.inGame = true;
+  clientInfo2.gameId = gameId;
+  
+  clients.set(ws1, clientInfo1);
+  clients.set(ws2, clientInfo2);
+  
+  // Prepare questions
+  const questions = getRandomQuestions(5);
+  
+  // Create game state
+  const gameState = {
+    id: gameId,
+    players: [
+      {
+        ws: ws1,
+        userId: player1.userId,
+        username: player1.username,
+        score: 0,
+        answers: [],
+        ready: false
+      },
+      {
+        ws: ws2,
+        userId: player2.userId,
+        username: player2.username,
+        score: 0,
+        answers: [],
+        ready: false
+      }
+    ],
+    questions,
+    currentQuestion: 0,
+    status: 'preparing',
+    startTime: null,
+    endTime: null
+  };
+  
+  // Store game state
+  activeGames.set(gameId, gameState);
+  
+  // Notify players
+  ws1.send(JSON.stringify({
+    type: 'match_found',
+    opponent: {
+      userId: player2.userId,
+      username: player2.username
+    }
+  }));
+  
+  ws2.send(JSON.stringify({
+    type: 'match_found',
+    opponent: {
+      userId: player1.userId,
+      username: player1.username
+    }
+  }));
+  
+  // Start game after 3 seconds
+  setTimeout(() => startGame(gameId), 3000);
+}
+
+// Start a game
+function startGame(gameId) {
+  const game = activeGames.get(gameId);
+  if (!game) return;
+  
+  console.log(`Starting game ${gameId}`);
+  
+  // Update game status
+  game.status = 'playing';
+  game.startTime = Date.now();
+  
+  // Store updated game state
+  activeGames.set(gameId, game);
+  
+  // Notify players
+  game.players.forEach(player => {
+    player.ws.send(JSON.stringify({
+      type: 'game_start'
+    }));
+  });
+  
+  // Send first question
+  sendQuestion(gameId);
+}
+
+// Send a question to both players
+function sendQuestion(gameId) {
+  const game = activeGames.get(gameId);
+  if (!game || game.status !== 'playing') return;
+  
+  if (game.currentQuestion >= game.questions.length) {
+    // All questions have been answered, end the game
+    endGame(gameId);
+    return;
+  }
+  
+  const questionData = game.questions[game.currentQuestion];
+  
+  console.log(`Sending question ${game.currentQuestion + 1} to game ${gameId}`);
+  
+  // Prepare question data to send
+  const questionToSend = {
+    type: 'question',
+    questionNumber: game.currentQuestion + 1,
+    totalQuestions: game.questions.length,
+    question: questionData.question,
+    answers: questionData.answers,
+    timeLimit: 15 // 15 seconds per question
+  };
+  
+  // Send to both players
+  game.players.forEach(player => {
+    player.ws.send(JSON.stringify(questionToSend));
+  });
+  
+  // Set a timer to move to the next question
+  game.questionTimer = setTimeout(() => {
+    processAnswers(gameId);
+  }, 16000); // 15 seconds + 1 second buffer
+}
+
+// Process answers for the current question
+function processAnswers(gameId) {
+  const game = activeGames.get(gameId);
+  if (!game || game.status !== 'playing') return;
+  
+  console.log(`Processing answers for question ${game.currentQuestion + 1} in game ${gameId}`);
+  
+  const question = game.questions[game.currentQuestion];
+  const correctAnswer = question.correctAnswer;
+  
+  // Process each player's answer
+  game.players.forEach(player => {
+    // Get the player's answer for this question
+    const playerAnswer = player.answers[game.currentQuestion];
+    
+    // If the player didn't answer, count as incorrect
+    if (!playerAnswer) {
+      player.answers[game.currentQuestion] = {
+        answer: null,
+        isCorrect: false,
+        responseTime: 15 // Max time
+      };
+      return;
+    }
+    
+    // Check if the answer is correct
+    const isCorrect = playerAnswer.answer === correctAnswer;
+    
+    // Update the player's answer
+    playerAnswer.isCorrect = isCorrect;
+    
+    // Update score if correct
+    if (isCorrect) {
+      // Score formula: max 1000 points, decreases with response time
+      // A 1-second response = 1000 points, 15-second response = 100 points
+      const timeBonus = Math.max(0, 15 - playerAnswer.responseTime);
+      const score = 100 + Math.round(timeBonus * 60);
+      player.score += score;
+    }
+  });
+  
+  // Send feedback to each player
+  game.players.forEach(player => {
+    const playerAnswer = player.answers[game.currentQuestion] || { answer: null, isCorrect: false, responseTime: 15 };
+    
+    player.ws.send(JSON.stringify({
+      type: 'answer_feedback',
+      questionNumber: game.currentQuestion + 1,
+      correctAnswer,
+      playerAnswer: playerAnswer.answer,
+      isCorrect: playerAnswer.isCorrect,
+      responseTime: playerAnswer.responseTime
+    }));
+  });
+  
+  // Send updated scores
+  sendScoreUpdate(gameId);
+  
+  // Move to the next question
+  game.currentQuestion++;
+  activeGames.set(gameId, game);
+  
+  // Wait a moment before sending the next question
+  setTimeout(() => {
+    sendQuestion(gameId);
+  }, 2000);
+}
+
+// Send score update to both players
+function sendScoreUpdate(gameId) {
+  const game = activeGames.get(gameId);
+  if (!game) return;
+  
+  const scores = {
+    [game.players[0].userId]: game.players[0].score,
+    [game.players[1].userId]: game.players[1].score
+  };
+  
+  game.players.forEach(player => {
+    const opponentId = game.players.find(p => p.userId !== player.userId).userId;
+    
+    player.ws.send(JSON.stringify({
+      type: 'update_scores',
+      scores: {
+        player: scores[player.userId],
+        opponent: scores[opponentId]
+      }
+    }));
+  });
+}
+
+// Handle answer submission from a player
+function handleAnswerSubmission(ws, clientInfo, message) {
+  if (!clientInfo.inGame || !clientInfo.gameId) {
+    sendErrorMessage(ws, 'You are not in a game');
+    return;
+  }
+  
+  const gameId = clientInfo.gameId;
+  const game = activeGames.get(gameId);
+  
+  if (!game || game.status !== 'playing') {
+    sendErrorMessage(ws, 'Game not found or not in playing state');
+    return;
+  }
+  
+  const player = game.players.find(p => p.userId === clientInfo.userId);
+  if (!player) {
+    sendErrorMessage(ws, 'Player not found in game');
+    return;
+  }
+  
+  // Record the player's answer
+  player.answers[game.currentQuestion] = {
+    answer: message.answer,
+    isCorrect: null, // Will be determined when processing
+    responseTime: message.responseTime || 0
+  };
+  
+  console.log(`Player ${player.username} submitted answer ${message.answer} for question ${game.currentQuestion + 1}`);
+  
+  // Check if both players have answered
+  const allAnswered = game.players.every(p => p.answers[game.currentQuestion]);
+  
+  if (allAnswered) {
+    // If both players answered, process the answers immediately
+    clearTimeout(game.questionTimer);
+    processAnswers(gameId);
+  }
+}
+
+// Handle player disconnect during a game
+function handlePlayerDisconnect(clientInfo, gameId) {
+  const game = activeGames.get(gameId);
+  if (!game) return;
+  
+  console.log(`Player ${clientInfo.username} disconnected from game ${gameId}`);
+  
+  // Find the opponent
+  const opponent = game.players.find(p => p.userId !== clientInfo.userId);
+  if (!opponent) {
+    // No opponent found, remove the game
+    activeGames.delete(gameId);
+    return;
+  }
+  
+  // Notify the opponent
+  opponent.ws.send(JSON.stringify({
+    type: 'game_error',
+    message: 'Your opponent has disconnected from the game'
+  }));
+  
+  // End the game
+  endGame(gameId, clientInfo.userId);
+}
+
+// End a game
+function endGame(gameId, disconnectedPlayerId = null) {
+  const game = activeGames.get(gameId);
+  if (!game) return;
+  
+  console.log(`Ending game ${gameId}`);
+  
+  // Update game status
+  game.status = 'ended';
+  game.endTime = Date.now();
+  
+  // Determine the winner
+  let winner = null;
+  if (disconnectedPlayerId) {
+    // If a player disconnected, the other player wins
+    winner = game.players.find(p => p.userId !== disconnectedPlayerId);
+  } else {
+    // Compare scores
+    if (game.players[0].score > game.players[1].score) {
+      winner = game.players[0];
+    } else if (game.players[1].score > game.players[0].score) {
+      winner = game.players[1];
+    }
+    // If scores are equal, it's a tie (winner remains null)
+  }
+  
+  // Prepare results for each player
+  game.players.forEach(player => {
+    const opponent = game.players.find(p => p.userId !== player.userId);
+    
+    // Calculate stats
+    const correctAnswers = player.answers.filter(a => a && a.isCorrect).length;
+    const totalQuestions = game.questions.length;
+    const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+    
+    // Calculate avg response time
+    const responseTimesSum = player.answers.reduce((sum, a) => sum + (a ? a.responseTime : 15), 0);
+    const avgResponseTime = player.answers.length > 0 ? responseTimesSum / player.answers.length : 0;
+    
+    // Determine winner status
+    let winnerStatus = 'tie';
+    if (winner) {
+      winnerStatus = winner.userId === player.userId ? 'player' : 'opponent';
+    }
+    
+    // Calculate rewards
+    let tokenReward = 10; // Base token reward
+    let xpReward = 50; // Base XP reward
+    
+    if (winnerStatus === 'player') {
+      tokenReward += 15; // Winner bonus
+      xpReward += 50; // Winner bonus
+    }
+    
+    // Add accuracy bonus
+    tokenReward += Math.floor(accuracy / 20); // Up to 5 bonus tokens for 100% accuracy
+    xpReward += Math.floor(accuracy / 10); // Up to 10 bonus XP for 100% accuracy
+    
+    // Send results to player
+    player.ws.send(JSON.stringify({
+      type: 'game_end',
+      results: {
+        winner: winnerStatus,
+        scores: {
+          player: player.score,
+          opponent: opponent.score
+        },
+        opponentName: opponent.username,
+        stats: {
+          correctAnswers,
+          totalQuestions,
+          accuracy,
+          avgResponseTime
+        },
+        rewards: {
+          tokens: tokenReward,
+          xp: xpReward
+        }
+      }
+    }));
+    
+    // Update client info
+    const playerWs = Array.from(clients.entries()).find(([_, client]) => client.userId === player.userId);
+    if (playerWs) {
+      const [ws, clientInfo] = playerWs;
+      clientInfo.inGame = false;
+      clientInfo.gameId = null;
+      clients.set(ws, clientInfo);
+    }
+    
+    // Award tokens and XP to the player's account
+    awardGameRewards(player.userId, tokenReward, xpReward, winnerStatus !== 'opponent');
+  });
+  
+  // Remove game from active games
+  activeGames.delete(gameId);
+}
+
+// Award tokens and Battle Pass XP to a player
+function awardGameRewards(userId, tokens, xp, isWinner) {
+  // Add tokens
+  addTokens(userId, tokens);
+  
+  // Add Battle Pass XP
+  const source = isWinner ? 'game_win' : 'game_participation';
+  addBattlePassXP(userId, xp, source);
+}
+
+// Send error message to a client
+function sendErrorMessage(ws, message) {
+  ws.send(JSON.stringify({
+    type: 'game_error',
+    message
+  }));
+}
+
+// Broadcast a message to all authenticated clients
+function broadcastMessage(message) {
+  clients.forEach((clientInfo, ws) => {
+    if (clientInfo.isAuthenticated && ws.readyState === 1) { // 1 = WebSocket.OPEN
+      ws.send(JSON.stringify(message));
+    }
+  });
+}
+
+// Get random questions for a game
+function getRandomQuestions(count = 5) {
+  const allQuestions = [
+    {
+      question: "What is the capital of France?",
+      answers: ["Berlin", "Madrid", "Paris", "Rome"],
+      correctAnswer: 2
+    },
+    {
+      question: "Which planet is known as the Red Planet?",
+      answers: ["Venus", "Mars", "Jupiter", "Saturn"],
+      correctAnswer: 1
+    },
+    {
+      question: "Who painted the Mona Lisa?",
+      answers: ["Vincent van Gogh", "Leonardo da Vinci", "Pablo Picasso", "Michelangelo"],
+      correctAnswer: 1
+    },
+    {
+      question: "What is the largest ocean on Earth?",
+      answers: ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+      correctAnswer: 3
+    },
+    {
+      question: "What is the chemical symbol for gold?",
+      answers: ["Ag", "Au", "Fe", "Cu"],
+      correctAnswer: 1
+    },
+    {
+      question: "Which of these elements is a noble gas?",
+      answers: ["Helium", "Hydrogen", "Oxygen", "Lithium"],
+      correctAnswer: 0
+    },
+    {
+      question: "In what year did the first manned moon landing occur?",
+      answers: ["1965", "1969", "1973", "1981"],
+      correctAnswer: 1
+    },
+    {
+      question: "Which of the following is not a programming language?",
+      answers: ["Python", "Java", "Docker", "Ruby"],
+      correctAnswer: 2
+    },
+    {
+      question: "What is the largest mammal on Earth?",
+      answers: ["African Elephant", "Blue Whale", "Giraffe", "Polar Bear"],
+      correctAnswer: 1
+    },
+    {
+      question: "Who wrote the theory of relativity?",
+      answers: ["Isaac Newton", "Niels Bohr", "Albert Einstein", "Stephen Hawking"],
+      correctAnswer: 2
+    },
+    {
+      question: "What is the smallest prime number?",
+      answers: ["0", "1", "2", "3"],
+      correctAnswer: 2
+    },
+    {
+      question: "Which country has the largest population in the world?",
+      answers: ["India", "United States", "China", "Russia"],
+      correctAnswer: 2
+    },
+    {
+      question: "What is the main component of the Sun?",
+      answers: ["Liquid Lava", "Molten Iron", "Hydrogen Gas", "Solid Rock"],
+      correctAnswer: 2
+    },
+    {
+      question: "Who discovered penicillin?",
+      answers: ["Alexander Fleming", "Marie Curie", "Louis Pasteur", "Joseph Lister"],
+      correctAnswer: 0
+    },
+    {
+      question: "Which of these is not a primary color in painting?",
+      answers: ["Red", "Blue", "Yellow", "Green"],
+      correctAnswer: 3
+    }
+  ];
+  
+  // Shuffle the questions
+  const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
+  
+  // Return the requested number of questions
+  return shuffled.slice(0, count);
+}
+
+// Run matchmaking finder every 5 seconds
+setInterval(findMatches, 5000);
+
 // Initialize Firebase with environment variables
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY || 'demo-api-key',
@@ -7002,8 +7776,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', version: '1.0.0' });
 });
 
-// Setup WebSocket Server
-const wss = new WebSocket.Server({ server, path: '/ws' });
+// WebSocket Server is already initialized
 
 // Tournament System Data
 const tournaments = [
