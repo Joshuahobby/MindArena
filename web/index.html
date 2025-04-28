@@ -71,6 +71,11 @@
       border-radius: 4px;
       color: #1976D2;
       font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .category-item:hover {
+      background-color: #BBDEFB;
     }
     button {
       background-color: #1976D2;
@@ -86,6 +91,96 @@
     button:hover {
       background-color: #1565C0;
     }
+    .home-content {
+      display: block;
+    }
+    .quiz-content {
+      display: none;
+    }
+    .question-card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-top: 20px;
+      width: 100%;
+    }
+    .question-text {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .answer-option {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      background-color: #f1f1f1;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .answer-option:hover {
+      background-color: #e3f2fd;
+      border-color: #1976D2;
+    }
+    .selected {
+      background-color: #e3f2fd;
+      border-color: #1976D2;
+    }
+    .correct {
+      background-color: #C8E6C9;
+      border-color: #4CAF50;
+    }
+    .incorrect {
+      background-color: #FFCDD2;
+      border-color: #F44336;
+    }
+    .timer {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1976D2;
+      margin-bottom: 10px;
+    }
+    .progress-bar {
+      height: 10px;
+      background-color: #e0e0e0;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .progress {
+      height: 100%;
+      background-color: #1976D2;
+      width: 0%;
+      transition: width 1s linear;
+    }
+    .quiz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .score {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .results {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .results h3 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .score-display {
+      font-size: 48px;
+      font-weight: bold;
+      color: #1976D2;
+      margin: 20px 0;
+    }
   </style>
 </head>
 <body>
@@ -94,7 +189,7 @@
   </header>
 
   <div class="container">
-    <div class="card">
+    <div class="card home-content" id="homeContent">
       <h2>Web Platform Demo</h2>
 
       <div class="status">
@@ -106,11 +201,11 @@
 
       <h3>Available Quiz Categories:</h3>
       <ul class="category-list">
-        <li class="category-item">Science</li>
-        <li class="category-item">History</li>
-        <li class="category-item">Geography</li>
-        <li class="category-item">Entertainment</li>
-        <li class="category-item">Sports</li>
+        <li class="category-item" onclick="selectCategory('Science')">Science</li>
+        <li class="category-item" onclick="selectCategory('History')">History</li>
+        <li class="category-item" onclick="selectCategory('Geography')">Geography</li>
+        <li class="category-item" onclick="selectCategory('Entertainment')">Entertainment</li>
+        <li class="category-item" onclick="selectCategory('Sports')">Sports</li>
       </ul>
 
       <p>
@@ -124,8 +219,293 @@
         PostgreSQL connections aren't supported in browsers due to security restrictions.
       </p>
 
-      <button>Start a Quiz Game</button>
+      <button onclick="startQuiz()">Start a Quiz Game</button>
+    </div>
+
+    <div class="card quiz-content" id="quizContent">
+      <div class="quiz-header">
+        <h2 id="categoryTitle">Science Quiz</h2>
+        <div class="score">Score: <span id="scoreValue">0</span></div>
+      </div>
+
+      <div class="timer">Time: <span id="timeLeft">10</span>s</div>
+      <div class="progress-bar">
+        <div class="progress" id="progressBar"></div>
+      </div>
+
+      <div class="question-card">
+        <div class="question-text" id="questionText">Loading question...</div>
+        <div id="answerOptions">
+          <!-- Answer options will be inserted here dynamically -->
+        </div>
+      </div>
+
+      <div class="results" id="resultsSection" style="display: none;">
+        <h3>Quiz Completed!</h3>
+        <p>You scored:</p>
+        <div class="score-display" id="finalScore">0</div>
+        <button onclick="goHome()">Back to Home</button>
+      </div>
     </div>
   </div>
+
+  <script>
+    // Mock quiz questions
+    const quizData = {
+      'Science': [
+        {
+          question: 'What is the chemical symbol for gold?',
+          options: ['Au', 'Ag', 'Fe', 'Gd'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Which planet is known as the Red Planet?',
+          options: ['Mars', 'Venus', 'Jupiter', 'Saturn'],
+          correctAnswer: 0
+        },
+        {
+          question: 'What is the hardest natural substance on Earth?',
+          options: ['Diamond', 'Platinum', 'Steel', 'Quartz'],
+          correctAnswer: 0
+        },
+        {
+          question: 'What is the largest organ in the human body?',
+          options: ['Skin', 'Liver', 'Brain', 'Heart'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Which of these is NOT a fundamental force of nature?',
+          options: ['Friction', 'Gravity', 'Electromagnetism', 'Strong Nuclear Force'],
+          correctAnswer: 0
+        }
+      ],
+      'History': [
+        {
+          question: 'In which year did World War II end?',
+          options: ['1945', '1939', '1942', '1950'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Who was the first President of the United States?',
+          options: ['George Washington', 'Thomas Jefferson', 'Abraham Lincoln', 'John Adams'],
+          correctAnswer: 0
+        },
+        {
+          question: 'The ancient city of Rome was built on how many hills?',
+          options: ['Seven', 'Five', 'Nine', 'Three'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Which empire was ruled by Genghis Khan?',
+          options: ['Mongol Empire', 'Roman Empire', 'Ottoman Empire', 'Byzantine Empire'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Who painted the Mona Lisa?',
+          options: ['Leonardo da Vinci', 'Michelangelo', 'Pablo Picasso', 'Vincent van Gogh'],
+          correctAnswer: 0
+        }
+      ],
+      'Geography': [
+        {
+          question: 'What is the capital of Japan?',
+          options: ['Tokyo', 'Kyoto', 'Osaka', 'Hiroshima'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Which is the largest ocean on Earth?',
+          options: ['Pacific Ocean', 'Atlantic Ocean', 'Indian Ocean', 'Arctic Ocean'],
+          correctAnswer: 0
+        },
+        {
+          question: 'What is the largest desert in the world?',
+          options: ['Antarctic Desert', 'Sahara Desert', 'Arabian Desert', 'Gobi Desert'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Which country has the most natural lakes?',
+          options: ['Canada', 'United States', 'Russia', 'Australia'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Which mountain range separates Europe from Asia?',
+          options: ['Ural Mountains', 'Alps', 'Himalayas', 'Andes'],
+          correctAnswer: 0
+        }
+      ],
+      'Entertainment': [
+        {
+          question: 'Who played Iron Man in the Marvel Cinematic Universe?',
+          options: ['Robert Downey Jr.', 'Chris Evans', 'Chris Hemsworth', 'Mark Ruffalo'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Which band performed the song "Bohemian Rhapsody"?',
+          options: ['Queen', 'The Beatles', 'Led Zeppelin', 'Rolling Stones'],
+          correctAnswer: 0
+        },
+        {
+          question: 'What was the first feature-length animated movie ever released?',
+          options: ['Snow White and the Seven Dwarfs', 'Pinocchio', 'Fantasia', 'Bambi'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Which TV series features a character named Walter White?',
+          options: ['Breaking Bad', 'Game of Thrones', 'The Walking Dead', 'Stranger Things'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Which artist has won the most Grammy Awards?',
+          options: ['Beyoncé', 'Michael Jackson', 'Stevie Wonder', 'Taylor Swift'],
+          correctAnswer: 0
+        }
+      ],
+      'Sports': [
+        {
+          question: 'In which sport would you perform a slam dunk?',
+          options: ['Basketball', 'Football', 'Tennis', 'Golf'],
+          correctAnswer: 0
+        },
+        {
+          question: 'How many players are there in a standard soccer team?',
+          options: ['11', '9', '10', '12'],
+          correctAnswer: 0
+        },
+        {
+          question: 'Which country has won the most FIFA World Cups?',
+          options: ['Brazil', 'Germany', 'Italy', 'Argentina'],
+          correctAnswer: 0
+        },
+        {
+          question: 'In which sport would you use a shuttlecock?',
+          options: ['Badminton', 'Tennis', 'Table Tennis', 'Volleyball'],
+          correctAnswer: 0
+        },
+        {
+          question: 'How many Olympic rings are there?',
+          options: ['5', '4', '6', '3'],
+          correctAnswer: 0
+        }
+      ]
+    };
+
+    let currentCategory = 'Science';
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let timer;
+    let timeLeft = 10;
+
+    function selectCategory(category) {
+      currentCategory = category;
+      const items = document.querySelectorAll('.category-item');
+      items.forEach(item => {
+        item.style.fontWeight = item.textContent === category ? 'bold' : 'normal';
+        item.style.backgroundColor = item.textContent === category ? '#BBDEFB' : '#E3F2FD';
+      });
+    }
+
+    function startQuiz() {
+      document.getElementById('homeContent').style.display = 'none';
+      document.getElementById('quizContent').style.display = 'block';
+      document.getElementById('categoryTitle').textContent = `${currentCategory} Quiz`;
+      document.getElementById('resultsSection').style.display = 'none';
+      
+      currentQuestionIndex = 0;
+      score = 0;
+      document.getElementById('scoreValue').textContent = score;
+      
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      if (currentQuestionIndex >= quizData[currentCategory].length) {
+        showResults();
+        return;
+      }
+
+      const questionData = quizData[currentCategory][currentQuestionIndex];
+      document.getElementById('questionText').textContent = questionData.question;
+      
+      const answerOptionsDiv = document.getElementById('answerOptions');
+      answerOptionsDiv.innerHTML = '';
+      
+      questionData.options.forEach((option, index) => {
+        const button = document.createElement('button');
+        button.className = 'answer-option';
+        button.textContent = option;
+        button.onclick = () => checkAnswer(index);
+        answerOptionsDiv.appendChild(button);
+      });
+
+      // Reset and start timer
+      timeLeft = 10;
+      document.getElementById('timeLeft').textContent = timeLeft;
+      document.getElementById('progressBar').style.width = '100%';
+      
+      clearInterval(timer);
+      timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timeLeft').textContent = timeLeft;
+        document.getElementById('progressBar').style.width = `${timeLeft * 10}%`;
+        
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          // Time's up - move to next question
+          setTimeout(() => {
+            currentQuestionIndex++;
+            loadQuestion();
+          }, 1000);
+        }
+      }, 1000);
+    }
+
+    function checkAnswer(selectedIndex) {
+      clearInterval(timer);
+      
+      const questionData = quizData[currentCategory][currentQuestionIndex];
+      const isCorrect = selectedIndex === questionData.correctAnswer;
+      
+      const options = document.querySelectorAll('.answer-option');
+      
+      // Show correct/incorrect UI feedback
+      options[selectedIndex].classList.add(isCorrect ? 'correct' : 'incorrect');
+      options[questionData.correctAnswer].classList.add('correct');
+      
+      // Update score based on time left if correct
+      if (isCorrect) {
+        const pointsEarned = Math.max(100, 100 + (timeLeft * 50));
+        score += pointsEarned;
+        document.getElementById('scoreValue').textContent = score;
+      }
+      
+      // Disable all options after selection
+      options.forEach(option => {
+        option.disabled = true;
+        option.style.cursor = 'default';
+      });
+      
+      // Move to next question after delay
+      setTimeout(() => {
+        currentQuestionIndex++;
+        loadQuestion();
+      }, 1500);
+    }
+
+    function showResults() {
+      document.getElementById('questionText').parentElement.style.display = 'none';
+      document.getElementById('resultsSection').style.display = 'block';
+      document.getElementById('finalScore').textContent = score;
+      document.getElementById('timeLeft').parentElement.style.display = 'none';
+      document.getElementById('progressBar').parentElement.style.display = 'none';
+    }
+
+    function goHome() {
+      document.getElementById('homeContent').style.display = 'block';
+      document.getElementById('quizContent').style.display = 'none';
+      document.getElementById('questionText').parentElement.style.display = 'block';
+      document.getElementById('timeLeft').parentElement.style.display = 'block';
+      document.getElementById('progressBar').parentElement.style.display = 'block';
+    }
+  </script>
 </body>
 </html>
