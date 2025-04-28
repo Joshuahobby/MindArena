@@ -4,9 +4,10 @@ const cors = require('cors');
 const firebase = require('firebase/app');
 require('firebase/auth');
 
-// Initialize express app
+// Initialize express app and create HTTP server
 const app = express();
 const port = process.env.PORT || 5000;
+const server = require('http').createServer(app);
 
 // Initialize Firebase with environment variables
 const firebaseConfig = {
@@ -940,10 +941,11 @@ app.get('/dashboard', (req, res) => {
       </div>
       
       <div class="content">
-        <div class="dashboard-header">
-          <div class="greeting">Welcome to MindArena, <span id="userDisplay">User</span>!</div>
-          <button class="button">Play Quick Match</button>
-        </div>
+        <div id="mainContent">
+          <div class="dashboard-header">
+            <div class="greeting">Welcome to MindArena, <span id="userDisplay">User</span>!</div>
+            <button class="button" id="playButton" onclick="startQuickMatch()">Play Quick Match</button>
+          </div>
         
         <div class="cards">
           <div class="card">
@@ -1008,14 +1010,15 @@ app.get('/dashboard', (req, res) => {
           </div>
         </div>
       </div>
+    </div>
       
       <script>
         // Initialize Firebase
         const firebaseConfig = {
-          apiKey: "${process.env.VITE_FIREBASE_API_KEY}",
-          authDomain: "${process.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com",
-          projectId: "${process.env.VITE_FIREBASE_PROJECT_ID}",
-          storageBucket: "${process.env.VITE_FIREBASE_PROJECT_ID}.appspot.com",
+          apiKey: process.env.VITE_FIREBASE_API_KEY,
+          authDomain: `${process.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+          projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+          storageBucket: `${process.env.VITE_FIREBASE_PROJECT_ID}.appspot.com`,
           appId: "${process.env.VITE_FIREBASE_APP_ID}"
         };
         
@@ -1051,8 +1054,840 @@ app.get('/dashboard', (req, res) => {
           }
         }
         
+        // WebSocket connection and game logic
+        let socket;
+        let gameData = {
+          gameId: null,
+          opponent: null,
+          currentQuestion: null,
+          myScore: 0,
+          opponentScore: 0,
+          questionStartTime: null,
+          questionTimer: null,
+          gameState: 'idle' // idle, searching, waiting, playing, finished
+        };
+        
+        // Connect to WebSocket server
+        function connectWebSocket() {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            console.log('WebSocket already connected');
+            return;
+          }
+          
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsUrl = `${protocol}//${window.location.host}/ws`;
+          
+          socket = new WebSocket(wsUrl);
+          
+          socket.onopen = function() {
+            console.log('WebSocket connection established');
+            
+            // Send authentication once WebSocket is open
+            const user = firebase.auth().currentUser;
+            if (user) {
+              authenticateWebSocket(user);
+            }
+          };
+          
+          socket.onmessage = function(event) {
+            const message = JSON.parse(event.data);
+            console.log('Received WebSocket message:', message);
+            
+            switch (message.type) {
+              case 'welcome':
+                console.log('Connected to game server:', message.connectionId);
+                break;
+                
+              case 'authSuccess':
+                console.log('WebSocket authentication successful');
+                break;
+                
+              case 'waitingForOpponent':
+                updateMatchmakingStatus('Searching for an opponent...');
+                break;
+                
+              case 'gameCreated':
+                gameData.gameId = message.gameId;
+                gameData.opponent = message.opponent;
+                gameData.gameState = 'waiting';
+                updateMatchmakingStatus(`Match found! Playing against ${message.opponent.displayName}`);
+                showGamePreparation(message.opponent.displayName);
+                break;
+                
+              case 'gameStart':
+                gameData.gameState = 'playing';
+                showGameInterface();
+                break;
+                
+              case 'question':
+                showQuestion(message);
+                break;
+                
+              case 'answerFeedback':
+                showAnswerFeedback(message);
+                break;
+                
+              case 'revealAnswer':
+                highlightCorrectAnswer(message.correctAnswer);
+                updateScores(message.scores);
+                break;
+                
+              case 'gameEnd':
+                endGame(message);
+                break;
+                
+              case 'error':
+                console.error('Game error:', message.message);
+                showGameError(message.message);
+                break;
+            }
+          };
+          
+          socket.onclose = function() {
+            console.log('WebSocket connection closed');
+            setTimeout(() => {
+              if (gameData.gameState === 'playing') {
+                showGameError('Connection lost. The game has ended.');
+                resetGame();
+              }
+            }, 1000);
+          };
+          
+          socket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+            showGameError('Connection error. Please try again later.');
+          };
+        }
+        
+        // Authenticate with the WebSocket server
+        function authenticateWebSocket(user) {
+          if (!socket || socket.readyState !== WebSocket.OPEN) return;
+          
+          socket.send(JSON.stringify({
+            type: 'auth',
+            userId: user.uid,
+            displayName: user.displayName || user.email
+          }));
+        }
+        
+        // Start a quick match
+        function startQuickMatch() {
+          const user = firebase.auth().currentUser;
+          if (!user) {
+            alert('You must be logged in to play a match.');
+            return;
+          }
+          
+          // Connect to WebSocket if not already connected
+          if (!socket || socket.readyState !== WebSocket.OPEN) {
+            connectWebSocket();
+            setTimeout(() => findMatch(user), 1000); // Wait for connection to establish
+          } else {
+            findMatch(user);
+          }
+        }
+        
+        // Find a match
+        function findMatch(user) {
+          gameData.gameState = 'searching';
+          
+          // Hide main content and show game area
+          document.getElementById('mainContent').style.display = 'none';
+          
+          // Create and show matchmaking UI if it doesn't exist
+          let gameArea = document.getElementById('gameArea');
+          if (!gameArea) {
+            gameArea = document.createElement('div');
+            gameArea.id = 'gameArea';
+            gameArea.className = 'game-area';
+            document.querySelector('.content').appendChild(gameArea);
+            
+            // Apply styles
+            gameArea.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            gameArea.style.backdropFilter = 'blur(10px)';
+            gameArea.style.borderRadius = '20px';
+            gameArea.style.padding = '30px';
+            gameArea.style.maxWidth = '800px';
+            gameArea.style.margin = '0 auto 30px';
+            gameArea.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.3)';
+          }
+          
+          // Update game area with matchmaking UI
+          gameArea.innerHTML = `
+            <div class="game-header">
+              <h2>Quick Match</h2>
+              <div id="matchStatus">Looking for an opponent...</div>
+            </div>
+            <div class="matchmaking-animation">
+              <div class="pulse"></div>
+            </div>
+            <div class="matchmaking-controls">
+              <button id="cancelMatchButton" class="button outline" onclick="cancelMatchmaking()">Cancel</button>
+            </div>
+            <style>
+              .game-header {
+                text-align: center;
+                margin-bottom: 25px;
+              }
+              #matchStatus {
+                color: #B2BEC3;
+                margin-top: 10px;
+              }
+              .matchmaking-animation {
+                display: flex;
+                justify-content: center;
+                margin: 40px 0;
+              }
+              .pulse {
+                width: 80px;
+                height: 80px;
+                background-color: rgba(108, 92, 231, 0.3);
+                border-radius: 50%;
+                position: relative;
+                animation: pulse 1.5s ease-in-out infinite;
+              }
+              .pulse:before, .pulse:after {
+                content: '';
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(108, 92, 231, 0.3);
+                border-radius: 50%;
+                z-index: -1;
+              }
+              .pulse:before {
+                animation: pulse 1.5s ease-in-out 0.5s infinite;
+              }
+              .pulse:after {
+                animation: pulse 1.5s ease-in-out 1s infinite;
+              }
+              @keyframes pulse {
+                0% {
+                  transform: scale(0.5);
+                  opacity: 0.5;
+                }
+                50% {
+                  transform: scale(1.2);
+                  opacity: 0;
+                }
+                100% {
+                  transform: scale(0.5);
+                  opacity: 0;
+                }
+              }
+              .matchmaking-controls {
+                text-align: center;
+              }
+              
+              /* Game interface styles */
+              .game-interface {
+                display: none;
+              }
+              .opponent-info {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                padding: 15px;
+                background-color: rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+              }
+              .player-avatar {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background-color: #6C5CE7;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                color: white;
+                margin-right: 10px;
+              }
+              .player-info {
+                display: flex;
+                align-items: center;
+              }
+              .scores {
+                display: flex;
+                align-items: center;
+                font-size: 24px;
+                font-weight: bold;
+              }
+              .score-divider {
+                margin: 0 10px;
+                color: #B2BEC3;
+              }
+              .question-container {
+                margin-top: 30px;
+                margin-bottom: 20px;
+              }
+              .question-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+              }
+              .question-counter {
+                font-size: 16px;
+                color: #B2BEC3;
+              }
+              .timer {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background-color: rgba(108, 92, 231, 0.2);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                font-weight: bold;
+                color: white;
+              }
+              .question-text {
+                font-size: 24px;
+                font-weight: 600;
+                margin-bottom: 30px;
+                line-height: 1.4;
+              }
+              .options-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+              }
+              .option {
+                background-color: rgba(255, 255, 255, 0.1);
+                padding: 15px;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                border: 2px solid transparent;
+              }
+              .option:hover {
+                background-color: rgba(255, 255, 255, 0.15);
+                transform: translateY(-2px);
+              }
+              .option.selected {
+                border-color: #6C5CE7;
+                background-color: rgba(108, 92, 231, 0.2);
+              }
+              .option.correct {
+                border-color: #2ecc71;
+                background-color: rgba(46, 204, 113, 0.2);
+              }
+              .option.incorrect {
+                border-color: #e74c3c;
+                background-color: rgba(231, 76, 60, 0.2);
+              }
+              .game-results {
+                text-align: center;
+                padding: 30px;
+              }
+              .result-title {
+                font-size: 36px;
+                font-weight: bold;
+                margin-bottom: 20px;
+              }
+              .result-stats {
+                margin: 30px 0;
+                display: flex;
+                justify-content: center;
+                gap: 30px;
+              }
+              .stat-item {
+                background-color: rgba(255, 255, 255, 0.1);
+                padding: 15px 25px;
+                border-radius: 10px;
+                text-align: center;
+              }
+              .stat-value {
+                font-size: 24px;
+                font-weight: bold;
+                margin-bottom: 5px;
+              }
+              .stat-label {
+                font-size: 14px;
+                color: #B2BEC3;
+              }
+              .game-preparation {
+                text-align: center;
+                padding: 30px;
+              }
+              .vs-container {
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                margin: 30px 0;
+              }
+              .player-card {
+                background-color: rgba(255, 255, 255, 0.1);
+                padding: 20px;
+                border-radius: 15px;
+                width: 40%;
+                text-align: center;
+              }
+              .large-avatar {
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                background-color: #6C5CE7;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 30px;
+                color: white;
+                margin: 0 auto 15px;
+              }
+              .player-name {
+                font-size: 20px;
+                font-weight: bold;
+                margin-bottom: 5px;
+              }
+              .player-status {
+                font-size: 14px;
+                color: #B2BEC3;
+              }
+              .vs-text {
+                font-size: 24px;
+                font-weight: bold;
+                color: #6C5CE7;
+              }
+              .countdown {
+                font-size: 36px;
+                font-weight: bold;
+                margin-top: 20px;
+              }
+            </style>
+          `;
+          
+          // Send matchmaking request
+          socket.send(JSON.stringify({
+            type: 'findMatch',
+            userId: user.uid
+          }));
+        }
+        
+        // Cancel matchmaking
+        function cancelMatchmaking() {
+          if (gameData.gameState === 'searching') {
+            socket.send(JSON.stringify({
+              type: 'cancelMatchmaking',
+              userId: firebase.auth().currentUser.uid
+            }));
+            
+            resetGame();
+          }
+        }
+        
+        // Update matchmaking status
+        function updateMatchmakingStatus(status) {
+          const statusElement = document.getElementById('matchStatus');
+          if (statusElement) {
+            statusElement.textContent = status;
+          }
+        }
+        
+        // Show game preparation screen with countdown
+        function showGamePreparation(opponentName) {
+          const user = firebase.auth().currentUser;
+          const displayName = user.displayName || user.email || 'You';
+          
+          const gameArea = document.getElementById('gameArea');
+          gameArea.innerHTML = `
+            <div class="game-preparation">
+              <h2>Match Starting</h2>
+              <div class="vs-container">
+                <div class="player-card">
+                  <div class="large-avatar">${displayName.charAt(0).toUpperCase()}</div>
+                  <div class="player-name">${displayName}</div>
+                  <div class="player-status">Ready</div>
+                </div>
+                <div class="vs-text">VS</div>
+                <div class="player-card">
+                  <div class="large-avatar">${opponentName.charAt(0).toUpperCase()}</div>
+                  <div class="player-name">${opponentName}</div>
+                  <div class="player-status">Ready</div>
+                </div>
+              </div>
+              <div class="countdown">3</div>
+            </div>
+          `;
+          
+          // Countdown animation
+          let count = 3;
+          const countdownElement = document.querySelector('.countdown');
+          const countdownInterval = setInterval(() => {
+            count--;
+            countdownElement.textContent = count > 0 ? count.toString() : 'Go!';
+            
+            if (count < 0) {
+              clearInterval(countdownInterval);
+            }
+          }, 1000);
+        }
+        
+        // Show the game interface
+        function showGameInterface() {
+          const user = firebase.auth().currentUser;
+          const myName = user.displayName || user.email || 'You';
+          const opponentName = gameData.opponent ? gameData.opponent.displayName : 'Opponent';
+          
+          const gameArea = document.getElementById('gameArea');
+          gameArea.innerHTML = `
+            <div class="game-interface" id="gameInterface">
+              <div class="opponent-info">
+                <div class="player-info">
+                  <div class="player-avatar">${myName.charAt(0).toUpperCase()}</div>
+                  <div class="player-name">${myName}</div>
+                </div>
+                <div class="scores">
+                  <span id="myScore">0</span>
+                  <span class="score-divider">-</span>
+                  <span id="opponentScore">0</span>
+                </div>
+                <div class="player-info">
+                  <div class="player-name">${opponentName}</div>
+                  <div class="player-avatar">${opponentName.charAt(0).toUpperCase()}</div>
+                </div>
+              </div>
+              <div class="question-container" id="questionContainer">
+                <div class="question-header">
+                  <div class="question-counter" id="questionCounter">Question 1/5</div>
+                  <div class="timer" id="questionTimer">10</div>
+                </div>
+                <div class="question-text" id="questionText">Waiting for question...</div>
+                <div class="options-container" id="optionsContainer">
+                  <!-- Options will be added dynamically -->
+                </div>
+              </div>
+            </div>
+          `;
+          
+          document.getElementById('gameInterface').style.display = 'block';
+        }
+        
+        // Show a question
+        function showQuestion(questionData) {
+          gameData.currentQuestion = questionData;
+          gameData.questionStartTime = Date.now();
+          
+          const questionCounter = document.getElementById('questionCounter');
+          const questionText = document.getElementById('questionText');
+          const optionsContainer = document.getElementById('optionsContainer');
+          const timerElement = document.getElementById('questionTimer');
+          
+          if (questionCounter) {
+            questionCounter.textContent = `Question ${questionData.questionNumber}/${questionData.totalQuestions}`;
+          }
+          
+          if (questionText) {
+            questionText.textContent = questionData.question;
+          }
+          
+          if (optionsContainer) {
+            optionsContainer.innerHTML = '';
+            questionData.options.forEach((option, index) => {
+              const optionElement = document.createElement('div');
+              optionElement.className = 'option';
+              optionElement.textContent = option;
+              optionElement.onclick = () => selectAnswer(index);
+              optionsContainer.appendChild(optionElement);
+            });
+          }
+          
+          // Start the timer
+          if (timerElement) {
+            let timeLeft = questionData.timeLimit;
+            timerElement.textContent = timeLeft;
+            
+            // Clear any existing timer
+            if (gameData.questionTimer) {
+              clearInterval(gameData.questionTimer);
+            }
+            
+            // Set up the new timer
+            gameData.questionTimer = setInterval(() => {
+              timeLeft--;
+              timerElement.textContent = timeLeft;
+              
+              // Visual indicator as time runs low
+              if (timeLeft <= 3) {
+                timerElement.style.backgroundColor = 'rgba(231, 76, 60, 0.5)';
+              }
+              
+              if (timeLeft <= 0) {
+                clearInterval(gameData.questionTimer);
+                // Time's up - if no answer selected, treat as timeout
+                const selectedOption = document.querySelector('.option.selected');
+                if (!selectedOption) {
+                  // Automatically submit timeout (no answer)
+                  submitAnswer(null);
+                }
+              }
+            }, 1000);
+          }
+        }
+        
+        // Select an answer
+        function selectAnswer(index) {
+          // Only allow selection if not already answered
+          if (document.querySelector('.option.correct') || document.querySelector('.option.incorrect')) {
+            return;
+          }
+          
+          const options = document.querySelectorAll('.option');
+          options.forEach(option => option.classList.remove('selected'));
+          
+          if (index !== null && options[index]) {
+            options[index].classList.add('selected');
+          }
+          
+          // Submit the answer with a slight delay for better UX
+          setTimeout(() => {
+            submitAnswer(index);
+          }, 300);
+        }
+        
+        // Submit an answer to the server
+        function submitAnswer(answerIndex) {
+          // Clear timer
+          if (gameData.questionTimer) {
+            clearInterval(gameData.questionTimer);
+            gameData.questionTimer = null;
+          }
+          
+          // Calculate time elapsed
+          const timeElapsed = (Date.now() - gameData.questionStartTime) / 1000;
+          
+          // Send answer to server
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+              type: 'answer',
+              gameId: gameData.gameId,
+              userId: firebase.auth().currentUser.uid,
+              answerIndex: answerIndex,
+              timeElapsed: timeElapsed
+            }));
+          }
+        }
+        
+        // Show feedback for an answer
+        function showAnswerFeedback(feedback) {
+          const myScoreElement = document.getElementById('myScore');
+          if (myScoreElement) {
+            myScoreElement.textContent = feedback.totalScore;
+            gameData.myScore = feedback.totalScore;
+          }
+          
+          // Show visual feedback (handled by highlightCorrectAnswer)
+        }
+        
+        // Highlight the correct answer
+        function highlightCorrectAnswer(correctIndex) {
+          const options = document.querySelectorAll('.option');
+          const selectedOption = document.querySelector('.option.selected');
+          
+          if (selectedOption) {
+            const selectedIndex = Array.from(options).indexOf(selectedOption);
+            
+            if (selectedIndex === correctIndex) {
+              selectedOption.classList.add('correct');
+            } else {
+              selectedOption.classList.add('incorrect');
+              if (options[correctIndex]) {
+                options[correctIndex].classList.add('correct');
+              }
+            }
+          } else {
+            // No answer was selected
+            if (options[correctIndex]) {
+              options[correctIndex].classList.add('correct');
+            }
+          }
+        }
+        
+        // Update scores display
+        function updateScores(scores) {
+          const myScoreElement = document.getElementById('myScore');
+          const opponentScoreElement = document.getElementById('opponentScore');
+          
+          if (myScoreElement && opponentScoreElement) {
+            // Get current user ID
+            const myUserId = firebase.auth().currentUser.uid;
+            
+            // Get opponent user ID
+            const opponentUserId = gameData.opponent ? gameData.opponent.userId : null;
+            
+            if (myUserId && opponentUserId) {
+              const myScore = scores[myUserId] || 0;
+              const opponentScore = scores[opponentUserId] || 0;
+              
+              myScoreElement.textContent = myScore;
+              opponentScoreElement.textContent = opponentScore;
+              
+              gameData.myScore = myScore;
+              gameData.opponentScore = opponentScore;
+            }
+          }
+        }
+        
+        // End the game and show results
+        function endGame(results) {
+          const user = firebase.auth().currentUser;
+          const myUserId = user.uid;
+          const opponentUserId = gameData.opponent ? gameData.opponent.userId : null;
+          
+          let resultMessage = '';
+          let resultClass = '';
+          
+          if (results.isDraw) {
+            resultMessage = "It's a Draw!";
+            resultClass = 'draw';
+          } else if (results.winner === myUserId) {
+            resultMessage = 'Victory!';
+            resultClass = 'victory';
+          } else {
+            resultMessage = 'Defeat';
+            resultClass = 'defeat';
+          }
+          
+          const gameArea = document.getElementById('gameArea');
+          gameArea.innerHTML = `
+            <div class="game-results">
+              <div class="result-title ${resultClass}">${resultMessage}</div>
+              <div class="final-score">
+                <div class="scores">
+                  <span>${gameData.myScore}</span>
+                  <span class="score-divider">-</span>
+                  <span>${gameData.opponentScore}</span>
+                </div>
+              </div>
+              <div class="result-stats">
+                <div class="stat-item">
+                  <div class="stat-value">${results.gameStats.questions}</div>
+                  <div class="stat-label">Questions</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value">${results.gameStats.duration}s</div>
+                  <div class="stat-label">Duration</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value">${gameData.myScore}</div>
+                  <div class="stat-label">Points Earned</div>
+                </div>
+              </div>
+              <button class="button" onclick="playAgain()">Play Again</button>
+              <button class="button outline" onclick="returnToDashboard()">Back to Dashboard</button>
+            </div>
+            <style>
+              .victory {
+                color: #2ecc71;
+              }
+              .defeat {
+                color: #e74c3c;
+              }
+              .draw {
+                color: #f39c12;
+              }
+              .final-score {
+                font-size: 36px;
+                font-weight: bold;
+                margin: 20px 0;
+              }
+            </style>
+          `;
+          
+          // Reset game state
+          gameData.gameState = 'finished';
+        }
+        
+        // Play another game
+        function playAgain() {
+          resetGame();
+          setTimeout(() => startQuickMatch(), 500);
+        }
+        
+        // Return to dashboard
+        function returnToDashboard() {
+          resetGame();
+        }
+        
+        // Reset the game state
+        function resetGame() {
+          // Reset game data
+          gameData = {
+            gameId: null,
+            opponent: null,
+            currentQuestion: null,
+            myScore: 0,
+            opponentScore: 0,
+            questionStartTime: null,
+            questionTimer: null,
+            gameState: 'idle'
+          };
+          
+          // Clear any running timers
+          if (gameData.questionTimer) {
+            clearInterval(gameData.questionTimer);
+            gameData.questionTimer = null;
+          }
+          
+          // Hide game area and show main content
+          const gameArea = document.getElementById('gameArea');
+          if (gameArea) {
+            gameArea.innerHTML = '';
+          }
+          
+          const mainContent = document.getElementById('mainContent');
+          if (mainContent) {
+            mainContent.style.display = 'block';
+          }
+        }
+        
+        // Show game error
+        function showGameError(message) {
+          const gameArea = document.getElementById('gameArea');
+          if (gameArea) {
+            gameArea.innerHTML = `
+              <div class="game-error">
+                <div class="error-icon">❌</div>
+                <div class="error-message">${message}</div>
+                <button class="button" onclick="returnToDashboard()">Return to Dashboard</button>
+              </div>
+              <style>
+                .game-error {
+                  text-align: center;
+                  padding: 40px 20px;
+                }
+                .error-icon {
+                  font-size: 48px;
+                  margin-bottom: 20px;
+                }
+                .error-message {
+                  font-size: 20px;
+                  color: #e74c3c;
+                  margin-bottom: 30px;
+                }
+              </style>
+            `;
+          }
+        }
+        
+        // Initialize WebSocket when user is authenticated
+        firebase.auth().onAuthStateChanged((user) => {
+          if (user) {
+            connectWebSocket();
+          }
+        });
+        
         // Handle logout
         function handleLogout() {
+          // Close WebSocket connection if open
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.close();
+          }
+          
           firebase.auth().signOut()
             .then(() => {
               // Sign-out successful, redirect to home
@@ -1075,7 +1910,502 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', version: '1.0.0' });
 });
 
+// Setup WebSocket Server
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ server, path: '/ws' });
+
+// Game and Player Management
+const activeGames = new Map(); // gameId -> game object
+const waitingPlayers = []; // Queue of players waiting for a match
+const connectedPlayers = new Map(); // userId -> WebSocket connection
+
+// Quiz Questions Database
+const quizQuestions = [
+  {
+    id: 1,
+    question: "What is the capital of France?",
+    options: ["London", "Berlin", "Paris", "Madrid"],
+    correctAnswer: 2,
+    category: "Geography",
+    difficulty: "easy",
+    timeLimit: 10 // Seconds
+  },
+  {
+    id: 2,
+    question: "Which element has the chemical symbol 'O'?",
+    options: ["Gold", "Oxygen", "Iron", "Carbon"],
+    correctAnswer: 1,
+    category: "Science",
+    difficulty: "easy",
+    timeLimit: 10
+  },
+  {
+    id: 3,
+    question: "Who painted the Mona Lisa?",
+    options: ["Vincent van Gogh", "Pablo Picasso", "Leonardo da Vinci", "Michelangelo"],
+    correctAnswer: 2,
+    category: "Art",
+    difficulty: "easy",
+    timeLimit: 10
+  },
+  {
+    id: 4,
+    question: "What is the largest planet in our Solar System?",
+    options: ["Earth", "Jupiter", "Saturn", "Mars"],
+    correctAnswer: 1,
+    category: "Science",
+    difficulty: "easy",
+    timeLimit: 10
+  },
+  {
+    id: 5,
+    question: "In which year did World War II end?",
+    options: ["1943", "1944", "1945", "1946"],
+    correctAnswer: 2,
+    category: "History",
+    difficulty: "easy",
+    timeLimit: 10
+  }
+];
+
+// Get random questions for a game
+function getRandomQuestions(count = 5, category = null) {
+  let filteredQuestions = [...quizQuestions];
+  
+  if (category) {
+    filteredQuestions = filteredQuestions.filter(q => q.category === category);
+  }
+  
+  // Shuffle and get random questions
+  const shuffled = filteredQuestions.sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, count);
+}
+
+// Game Session class
+class GameSession {
+  constructor(player1, player2, gameId) {
+    this.gameId = gameId;
+    this.players = [player1, player2];
+    this.playerScores = { [player1.userId]: 0, [player2.userId]: 0 };
+    this.playerAnswers = { [player1.userId]: [], [player2.userId]: [] };
+    this.questions = getRandomQuestions(5);
+    this.currentQuestionIndex = 0;
+    this.gameState = 'waiting'; // waiting, started, finished
+    this.startTime = null;
+    this.timePerQuestion = 10; // seconds
+    this.timers = [];
+  }
+
+  // Start a game
+  start() {
+    this.gameState = 'started';
+    this.startTime = Date.now();
+    this.sendToAllPlayers({
+      type: 'gameStart',
+      gameId: this.gameId,
+      totalQuestions: this.questions.length
+    });
+    this.sendNextQuestion();
+  }
+
+  // Send the next question to players
+  sendNextQuestion() {
+    if (this.currentQuestionIndex >= this.questions.length) {
+      this.endGame();
+      return;
+    }
+
+    const question = this.questions[this.currentQuestionIndex];
+    this.sendToAllPlayers({
+      type: 'question',
+      questionNumber: this.currentQuestionIndex + 1,
+      totalQuestions: this.questions.length,
+      question: question.question,
+      options: question.options,
+      timeLimit: question.timeLimit
+    });
+
+    // Create a timer to move to the next question
+    const timer = setTimeout(() => {
+      this.currentQuestionIndex++;
+      this.sendNextQuestion();
+    }, question.timeLimit * 1000);
+
+    this.timers.push(timer);
+  }
+
+  // Process a player's answer
+  processAnswer(userId, answerIndex, timeElapsed) {
+    const currentQuestion = this.questions[this.currentQuestionIndex];
+    let points = 0;
+    let isCorrect = false;
+
+    // Check if answer is correct
+    if (answerIndex === currentQuestion.correctAnswer) {
+      // Award points based on speed - faster answer = more points
+      const timeBonus = Math.max(0, currentQuestion.timeLimit - timeElapsed);
+      points = 100 + Math.floor(timeBonus * 10); // Base 100 + time bonus
+      isCorrect = true;
+    }
+
+    // Save answer info
+    this.playerAnswers[userId].push({
+      questionIndex: this.currentQuestionIndex,
+      answerIndex: answerIndex,
+      isCorrect: isCorrect,
+      timeElapsed: timeElapsed,
+      points: points
+    });
+
+    // Update player score
+    this.playerScores[userId] += points;
+
+    // Send answer feedback to the player
+    const player = this.players.find(p => p.userId === userId);
+    if (player && player.ws.readyState === WebSocket.OPEN) {
+      player.ws.send(JSON.stringify({
+        type: 'answerFeedback',
+        isCorrect: isCorrect,
+        points: points,
+        totalScore: this.playerScores[userId]
+      }));
+    }
+
+    // Check if all players have answered
+    const allAnswered = this.players.every(player => 
+      this.playerAnswers[player.userId].length > this.currentQuestionIndex
+    );
+
+    // If all players have answered, move to the next question
+    if (allAnswered) {
+      // Clear the current question timer
+      if (this.timers.length > 0) {
+        clearTimeout(this.timers.pop());
+      }
+      
+      // Show correct answer to all players
+      this.sendToAllPlayers({
+        type: 'revealAnswer',
+        correctAnswer: currentQuestion.correctAnswer,
+        scores: this.playerScores
+      });
+      
+      // Delay before moving to the next question
+      setTimeout(() => {
+        this.currentQuestionIndex++;
+        this.sendNextQuestion();
+      }, 2000); // 2 second delay before next question
+    }
+  }
+
+  // End the game
+  endGame() {
+    this.gameState = 'finished';
+    
+    // Clear any remaining timers
+    this.timers.forEach(timer => clearTimeout(timer));
+    this.timers = [];
+    
+    // Find the winner
+    let winnerUserId = null;
+    let highestScore = -1;
+    let isDraw = false;
+    
+    for (const [userId, score] of Object.entries(this.playerScores)) {
+      if (score > highestScore) {
+        highestScore = score;
+        winnerUserId = userId;
+        isDraw = false;
+      } else if (score === highestScore) {
+        isDraw = true;
+      }
+    }
+    
+    // Send game results to all players
+    this.sendToAllPlayers({
+      type: 'gameEnd',
+      scores: this.playerScores,
+      winner: isDraw ? null : winnerUserId,
+      isDraw: isDraw,
+      gameStats: {
+        duration: Math.floor((Date.now() - this.startTime) / 1000),
+        questions: this.questions.length,
+        playerAnswers: this.playerAnswers
+      }
+    });
+    
+    // Remove game from active games
+    activeGames.delete(this.gameId);
+    
+    // Disconnect players from this game
+    this.players.forEach(player => {
+      if (player.ws.readyState === WebSocket.OPEN) {
+        player.game = null;
+      }
+    });
+  }
+  
+  // Send a message to all players in the game
+  sendToAllPlayers(message) {
+    this.players.forEach(player => {
+      if (player.ws.readyState === WebSocket.OPEN) {
+        player.ws.send(JSON.stringify(message));
+      }
+    });
+  }
+  
+  // Remove a player from the game
+  removePlayer(userId) {
+    // If the game is still in progress, end it with the other player as winner
+    if (this.gameState === 'started') {
+      const remainingPlayer = this.players.find(p => p.userId !== userId);
+      if (remainingPlayer) {
+        this.sendToAllPlayers({
+          type: 'playerLeft',
+          userId: userId,
+          winner: remainingPlayer.userId
+        });
+        
+        // Update scores to ensure the remaining player wins
+        this.playerScores[remainingPlayer.userId] = 999;
+        this.endGame();
+      }
+    }
+  }
+}
+
+// Create a new game with two players
+function createGame(player1, player2) {
+  const gameId = 'game_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  
+  // Set up player objects with WS connections
+  const gamePlayerObj1 = {
+    userId: player1.userId,
+    displayName: player1.displayName,
+    ws: player1.ws,
+    game: null
+  };
+  
+  const gamePlayerObj2 = {
+    userId: player2.userId,
+    displayName: player2.displayName,
+    ws: player2.ws,
+    game: null
+  };
+  
+  // Create game session
+  const game = new GameSession(gamePlayerObj1, gamePlayerObj2, gameId);
+  
+  // Link players to the game
+  gamePlayerObj1.game = game;
+  gamePlayerObj2.game = game;
+  
+  // Add to active games
+  activeGames.set(gameId, game);
+  
+  // Notify both players about the match
+  [gamePlayerObj1, gamePlayerObj2].forEach(player => {
+    const opponent = player === gamePlayerObj1 ? gamePlayerObj2 : gamePlayerObj1;
+    player.ws.send(JSON.stringify({
+      type: 'gameCreated',
+      gameId: gameId,
+      opponent: {
+        userId: opponent.userId,
+        displayName: opponent.displayName
+      }
+    }));
+  });
+  
+  // Start the game after a brief delay
+  setTimeout(() => {
+    game.start();
+  }, 3000);
+  
+  return game;
+}
+
+// Match a player with an opponent or add to waiting queue
+function matchPlayer(player) {
+  if (waitingPlayers.length > 0) {
+    // Get opponent from waiting queue
+    const opponent = waitingPlayers.shift();
+    createGame(player, opponent);
+  } else {
+    // No opponent available - add to waiting queue
+    waitingPlayers.push(player);
+    player.ws.send(JSON.stringify({
+      type: 'waitingForOpponent'
+    }));
+  }
+}
+
+// Handle WebSocket connections
+wss.on('connection', (ws, req) => {
+  console.log('New WebSocket connection');
+  
+  // Setup initial state for the connection
+  const connectionId = Date.now() + '_' + Math.floor(Math.random() * 1000);
+  ws.id = connectionId;
+  ws.isAlive = true;
+  
+  // Handle ping/pong for keeping connection alive
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+  
+  // Handle incoming messages
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      console.log('Received message:', data.type);
+      
+      switch (data.type) {
+        case 'auth':
+          // Authenticate user and store connection
+          const userId = data.userId;
+          const displayName = data.displayName || 'Player';
+          
+          const player = {
+            userId,
+            displayName,
+            ws,
+            status: 'online',
+            lastActive: Date.now()
+          };
+          
+          connectedPlayers.set(userId, player);
+          
+          ws.send(JSON.stringify({
+            type: 'authSuccess',
+            message: 'Authentication successful'
+          }));
+          break;
+          
+        case 'findMatch':
+          // Find a match for the player
+          if (!data.userId) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Authentication required to find a match'
+            }));
+            return;
+          }
+          
+          const searchingPlayer = connectedPlayers.get(data.userId);
+          if (!searchingPlayer) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Player not found'
+            }));
+            return;
+          }
+          
+          matchPlayer(searchingPlayer);
+          break;
+          
+        case 'answer':
+          // Process player's answer
+          if (!data.gameId || !data.userId || data.answerIndex === undefined) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Invalid answer data'
+            }));
+            return;
+          }
+          
+          const game = activeGames.get(data.gameId);
+          if (!game || game.gameState !== 'started') {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Game not found or not in progress'
+            }));
+            return;
+          }
+          
+          game.processAnswer(data.userId, data.answerIndex, data.timeElapsed || 0);
+          break;
+          
+        case 'cancelMatchmaking':
+          // Cancel matchmaking for a waiting player
+          if (!data.userId) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'User ID required'
+            }));
+            return;
+          }
+          
+          // Find and remove from waiting queue
+          const playerIndex = waitingPlayers.findIndex(p => p.userId === data.userId);
+          if (playerIndex !== -1) {
+            waitingPlayers.splice(playerIndex, 1);
+            ws.send(JSON.stringify({
+              type: 'matchmakingCancelled'
+            }));
+          }
+          break;
+      }
+    } catch (error) {
+      console.error('Error processing message:', error);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Error processing message'
+      }));
+    }
+  });
+  
+  // Handle client disconnection
+  ws.on('close', () => {
+    console.log('WebSocket connection closed');
+    
+    // Find and remove player from connected players
+    for (const [userId, player] of connectedPlayers.entries()) {
+      if (player.ws === ws) {
+        // If player was in a game, handle the disconnect
+        if (player.game) {
+          player.game.removePlayer(userId);
+        }
+        
+        // Remove from waiting queue if present
+        const waitingIndex = waitingPlayers.findIndex(p => p.userId === userId);
+        if (waitingIndex !== -1) {
+          waitingPlayers.splice(waitingIndex, 1);
+        }
+        
+        // Remove from connected players
+        connectedPlayers.delete(userId);
+        break;
+      }
+    }
+  });
+  
+  // Send welcome message
+  ws.send(JSON.stringify({
+    type: 'welcome',
+    message: 'Connected to MindArena WebSocket Server',
+    connectionId: connectionId
+  }));
+});
+
+// Heartbeat to keep connections alive and clean up dead connections
+const interval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      return ws.terminate();
+    }
+    
+    ws.isAlive = false;
+    ws.ping(() => {});
+  });
+}, 30000);
+
+// Clean up interval on server close
+wss.on('close', () => {
+  clearInterval(interval);
+});
+
 // Start server
-app.listen(port, '0.0.0.0', () => {
+server.listen(port, '0.0.0.0', () => {
   console.log(`Server running at http://0.0.0.0:${port}/`);
+  console.log(`WebSocket server running at ws://0.0.0.0:${port}/ws`);
 });
