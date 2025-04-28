@@ -6063,6 +6063,7 @@ app.get('/play', (req, res) => {
       <title>Play Now - MindArena</title>
       <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
       <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+      ${commonJsForHead}
       <style>
         /* General styles */
         body {
