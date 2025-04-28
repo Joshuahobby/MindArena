@@ -26,7 +26,7 @@ app.get('/', (req, res) => {
           padding: 0;
           background: linear-gradient(135deg, #2D3436 0%, #000000 100%);
           color: white;
-          height: 100vh;
+          min-height: 100vh;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -42,6 +42,11 @@ app.get('/', (req, res) => {
           align-items: center;
           justify-content: center;
           margin-bottom: 24px;
+          cursor: pointer;
+          transition: transform 0.3s ease;
+        }
+        .logo:hover {
+          transform: scale(1.05);
         }
         .logo svg {
           width: 60px;
@@ -65,26 +70,185 @@ app.get('/', (req, res) => {
           gap: 16px;
           max-width: 600px;
           margin-top: 32px;
+          margin-bottom: 40px;
         }
         .feature {
           background-color: rgba(255, 255, 255, 0.1);
           border-radius: 8px;
-          padding: 16px;
+          padding: 20px;
           width: 160px;
           text-align: center;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          border: 2px solid transparent;
+        }
+        .feature:hover {
+          background-color: rgba(255, 255, 255, 0.2);
+          transform: translateY(-5px);
+          border-color: #6C5CE7;
         }
         .feature h3 {
-          margin: 0 0 4px 0;
-          font-size: 14px;
+          margin: 0 0 8px 0;
+          font-size: 16px;
+          color: #6C5CE7;
         }
         .feature p {
           margin: 0;
-          font-size: 12px;
+          font-size: 14px;
+          color: #B2BEC3;
+        }
+        .auth-buttons {
+          display: flex;
+          gap: 16px;
+          margin-top: 32px;
+        }
+        .button {
+          display: inline-block;
+          background-color: #6C5CE7;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 8px;
+          text-decoration: none;
+          font-weight: bold;
+          transition: all 0.3s ease;
+          border: none;
+          cursor: pointer;
+        }
+        .button:hover {
+          background-color: #5541c7;
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);
+        }
+        .button.outline {
+          background-color: transparent;
+          border: 2px solid #6C5CE7;
+        }
+        .button.outline:hover {
+          background-color: rgba(108, 92, 231, 0.1);
+        }
+        .auth-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.8);
+          display: none;
+          justify-content: center;
+          align-items: center;
+          z-index: 100;
+        }
+        .auth-modal.show {
+          display: flex;
+        }
+        .modal-content {
+          background-color: #2D3436;
+          padding: 32px;
+          border-radius: 16px;
+          max-width: 400px;
+          width: 100%;
+          position: relative;
+          border: 2px solid #6C5CE7;
+        }
+        .close-modal {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          font-size: 24px;
+          cursor: pointer;
+          color: #B2BEC3;
+        }
+        .close-modal:hover {
+          color: white;
+        }
+        input {
+          width: 100%;
+          padding: 12px;
+          margin: 8px 0 16px;
+          border-radius: 8px;
+          border: 2px solid #444;
+          background-color: #333;
+          color: white;
+          font-size: 16px;
+          box-sizing: border-box;
+        }
+        input:focus {
+          border-color: #6C5CE7;
+          outline: none;
+        }
+        .bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          background-color: rgba(0, 0, 0, 0.7);
+          backdrop-filter: blur(10px);
+          display: flex;
+          justify-content: center;
+          padding: 16px 0;
+        }
+        .nav-links {
+          display: flex;
+          gap: 32px;
+        }
+        .nav-link {
+          color: #B2BEC3;
+          text-decoration: none;
+          transition: color 0.3s ease;
+        }
+        .nav-link:hover {
+          color: #6C5CE7;
         }
       </style>
     </head>
     <body>
-      <div class="logo">
+      <div id="loginModal" class="auth-modal">
+        <div class="modal-content">
+          <span class="close-modal" onclick="closeModal('loginModal')">&times;</span>
+          <h2>Login to MindArena</h2>
+          <p>Enter your credentials to continue</p>
+          <form id="loginForm">
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="Enter your email" required>
+            
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="Enter your password" required>
+            
+            <button type="submit" class="button" style="width: 100%;">LOGIN</button>
+          </form>
+          <p style="margin-top: 16px; text-align: center;">
+            Don't have an account? <a href="#" onclick="showModal('registerModal'); closeModal('loginModal');" style="color: #6C5CE7;">Register</a>
+          </p>
+        </div>
+      </div>
+      
+      <div id="registerModal" class="auth-modal">
+        <div class="modal-content">
+          <span class="close-modal" onclick="closeModal('registerModal')">&times;</span>
+          <h2>Create an Account</h2>
+          <p>Join MindArena and start competing</p>
+          <form id="registerForm">
+            <label for="username">Username</label>
+            <input type="text" id="username" placeholder="Choose a username" required>
+            
+            <label for="regEmail">Email</label>
+            <input type="email" id="regEmail" placeholder="Enter your email" required>
+            
+            <label for="regPassword">Password</label>
+            <input type="password" id="regPassword" placeholder="Create a password" required>
+            
+            <label for="confirmPassword">Confirm Password</label>
+            <input type="password" id="confirmPassword" placeholder="Confirm your password" required>
+            
+            <button type="submit" class="button" style="width: 100%;">REGISTER</button>
+          </form>
+          <p style="margin-top: 16px; text-align: center;">
+            Already have an account? <a href="#" onclick="showModal('loginModal'); closeModal('registerModal');" style="color: #6C5CE7;">Login</a>
+          </p>
+        </div>
+      </div>
+      
+      <div class="logo" onclick="window.location.reload()">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path d="M0 0h24v24H0z" fill="none"/>
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/>
@@ -93,20 +257,91 @@ app.get('/', (req, res) => {
       <h1>MindArena</h1>
       <p>Where Fast Minds Become Champions</p>
       
+      <div class="auth-buttons">
+        <button class="button" onclick="showModal('loginModal')">LOGIN</button>
+        <button class="button outline" onclick="showModal('registerModal')">REGISTER</button>
+      </div>
+      
       <div class="features">
-        <div class="feature">
+        <div class="feature" onclick="navigateTo('quiz')">
           <h3>Quiz Battles</h3>
           <p>Compete in real-time quiz matches</p>
         </div>
-        <div class="feature">
+        <div class="feature" onclick="navigateTo('tournaments')">
           <h3>Tournaments</h3>
           <p>Join tournaments with token entry fees</p>
         </div>
-        <div class="feature">
+        <div class="feature" onclick="navigateTo('clans')">
           <h3>Clans</h3>
           <p>Form teams and compete together</p>
         </div>
       </div>
+      
+      <div class="bottom-nav">
+        <div class="nav-links">
+          <a href="/about" class="nav-link">About</a>
+          <a href="/features" class="nav-link">Features</a>
+          <a href="/contact" class="nav-link">Contact</a>
+          <a href="/privacy" class="nav-link">Privacy Policy</a>
+        </div>
+      </div>
+      
+      <script>
+        function showModal(modalId) {
+          document.getElementById(modalId).classList.add('show');
+        }
+        
+        function closeModal(modalId) {
+          document.getElementById(modalId).classList.remove('show');
+        }
+        
+        function navigateTo(page) {
+          alert('This would navigate to the ' + page + ' screen in the real app. For now, please login or register to continue.');
+          showModal('loginModal');
+        }
+        
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+          const loginModal = document.getElementById('loginModal');
+          const registerModal = document.getElementById('registerModal');
+          
+          if (event.target === loginModal) {
+            closeModal('loginModal');
+          }
+          
+          if (event.target === registerModal) {
+            closeModal('registerModal');
+          }
+        };
+        
+        // Handle form submissions
+        document.getElementById('loginForm').addEventListener('submit', function(event) {
+          event.preventDefault();
+          const email = document.getElementById('email').value;
+          const password = document.getElementById('password').value;
+          
+          // In a real app, we would authenticate with Firebase here
+          alert('Login functionality will be implemented with Firebase. Email: ' + email);
+          closeModal('loginModal');
+        });
+        
+        document.getElementById('registerForm').addEventListener('submit', function(event) {
+          event.preventDefault();
+          const username = document.getElementById('username').value;
+          const email = document.getElementById('regEmail').value;
+          const password = document.getElementById('regPassword').value;
+          const confirmPassword = document.getElementById('confirmPassword').value;
+          
+          if (password !== confirmPassword) {
+            alert('Passwords do not match');
+            return;
+          }
+          
+          // In a real app, we would register with Firebase here
+          alert('Registration functionality will be implemented with Firebase. Username: ' + username + ', Email: ' + email);
+          closeModal('registerModal');
+        });
+      </script>
     </body>
     </html>
   `);
