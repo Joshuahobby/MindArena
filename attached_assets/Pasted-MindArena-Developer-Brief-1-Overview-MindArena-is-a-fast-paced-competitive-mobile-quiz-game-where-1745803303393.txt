@@ -1,0 +1,257 @@
+MindArena Developer Brief
+
+1. Overview
+MindArena is a fast‑paced, competitive mobile quiz game where 2–5 players battle in real‑time to answer questions. The core appeal is quick matches, social competition, and addictive reward loops. Monetization is driven by rewarded video ads, interstitials, banners, and optional in‑app purchases (Battle Pass, tokens).
+Key Objectives
+Deliver a smooth, addictive quiz experience with minimal friction.
+
+
+Integrate ad placements seamlessly to maximize revenue without disrupting gameplay.
+
+
+Build viral growth loops (referrals, social share, clans).
+
+
+Launch MVP ASAP; scale to 50k MAU in 3 months.
+
+
+
+2. Target Audience
+Demographics: Ages 13–45, casual gamers, trivia enthusiasts.
+
+
+Psychographics: Competitive, social, enjoys quick bursts of play.
+
+
+Geography: Worldwide launch, focus initially on Africa and Secondary English‑speaking markets (US, UK, Canada, India).
+
+
+
+3. Core Features
+3.1 MVP (Phase 1)
+Quick Match: 2–5 player random matches.
+
+
+Basic Quiz Topics: 5–10 general categories (Movies, Science, Sports, History, Geography).
+
+
+Live Leaderboard: Global ranking by points and wins.
+
+
+Revive Mechanic: Watch a rewarded ad to continue after loss.
+
+
+Ad Monetization:
+
+
+Rewarded Videos (revive, double points).
+
+
+Interstitials (after every 2–3 matches).
+
+
+Banner (lobby, waiting screens).
+
+
+Coins System: Earn per win; used for skins/emojis.
+
+
+Daily Login Bonus: Tiered coin rewards for consecutive days.
+
+
+Invite Friends: Referral link grants both parties coins.
+
+
+Profile Screen: Avatar, username, stats.
+
+
+Social Share: One‑tap share of big wins to social.
+
+
+3.2 Full Version (Phase 2+)
+Tournaments: Time‑limited events with token entry.
+
+
+Clans/Teams: Create or join, team vs. team battles.
+
+
+Battle Pass: Monthly seasons with exclusive rewards.
+
+
+Custom Avatars & Skins: Unlockable cosmetic items.
+
+
+Quiz Creator Mode: User‑submitted questions (moderated).
+
+
+Themed Events: Holiday quizzes, special topics.
+
+
+Power‑Ups: Skip, 50/50, extra time (earned or via ads).
+
+
+Premium Currency: Optional purchases for cosmetic/power‑ups.
+
+
+
+4. User Flows & Wireframes
+Splash Screen
+     ↓
+  Home Screen
+    ↙ ↓ ↘
+ Play  Leaderboard  Missions
+  ↓          ↘
+Matchmaking  Shop
+  ↓          ↘
+Battle Screen   Profile
+  ↓
+Result Screen
+
+Splash: Logo animation → Home.
+
+
+Home: Play Now, Tournaments, Leaderboard, Daily Missions, Shop, Profile.
+
+
+Play Now: Matchmaking spinner, optional invite.
+
+
+Battle: 5–10 timed questions; no ads.
+
+
+Result: Win/Lose, points summary, “Watch to Double” or “Revive” options, Interstitial.
+
+
+Leaderboard: Global, weekly, monthly boards.
+
+
+Missions: Daily tasks and rewards panel.
+
+
+Shop: Spend coins or watch ads.
+
+
+Profile: Stats, share button.
+
+
+Wireframes should follow Material Design (Android) or Cupertino (iOS) conventions; maintain consistency across platforms.
+
+5. Monetization Strategy
+Rewarded Video Ads: Revive after loss; double-points upsell.
+
+
+Interstitial Ads: Insert after 2–3 matches, tournament reward claims.
+
+
+Banner Ads: Lobby, matchmaking, shop screens.
+
+
+Soft Paywall: Tournament entry tokens via ads or purchase.
+
+
+Battle Pass/IAP: Monthly pass unlocking skins, power‑ups, extra revives.
+
+
+Ad Frequency Guidelines: Max 1 interstitial per ~3 minutes; banner never during active gameplay.
+
+6. Technical Stack
+Frontend
+Framework: Flutter (single codebase) or React Native + Expo.
+
+
+UI: Material & Cupertino widgets (Flutter) or shadcn/ui (RN).
+
+
+Backend
+Primary: Firebase (Auth, Firestore, Realtime DB, Cloud Functions, Hosting).
+
+
+Alternate: Node.js + Express + MongoDB Atlas/Postgres, Socket.IO for real‑time.
+
+
+Ads & IAP
+SDKs: Google AdMob, Facebook Audience Network (optional), Play Billing, StoreKit.
+
+
+Analytics & Monitoring
+Tools: Firebase Analytics, Crashlytics; upgrade to Amplitude/Mixpanel for cohorts.
+
+
+CI/CD
+Build: GitHub Actions or Bitrise.
+
+
+Deployment: Fastlane for TestFlight/Google Play internal.
+
+
+
+7. Analytics & KPIs
+DAU/MAU, Retention (D1, D7, D30)
+
+
+ARPU, ARPPU, LTV
+
+
+Ad Impressions, Ad eCPM, Rewarded Video Completion Rate
+
+
+Referral Conversion Rate
+
+
+Crash Rate, Load Times
+
+
+
+8. Timeline & Milestones
+Phase
+Duration
+Deliverables
+MVP Development
+ASAP
+Full Android/iOS builds, basic analytics, ads integrated
+Beta Testing
+
+
+Closed beta, bug fixes, analytics review
+Soft Launch
+
+
+Launch in 2–3 regions, monitor performance
+Feature Expansion
+
+
+Tournaments, Clans, Battle Pass
+Global Launch
+Ongoing
+Localization, marketing push
+
+
+9. Deliverables & Acceptance Criteria
+Fully functional cross‑platform app matching flows above.
+
+
+All ads placements and monetization hooks working as specified.
+
+
+Backend endpoints for matchmaking, leaderboards, missions.
+
+
+CI/CD pipeline with automated builds and deployments.
+
+
+Documentation: API spec, deployment guide, analytics dashboard setup.
+
+
+
+10. Appendix
+App Name & Tagline: MindArena – Where Fast Minds Become Champions.
+
+
+Logo & Color Palette: (attach design assets separately).
+
+
+Contact & Support: Product Owner: MindArena Games, email@example.com, Slack channel #MindArena.
+
+
+
+Good luck building MindArena! 🎯🏆
