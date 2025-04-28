@@ -1,371 +1,474 @@
 import 'package:flutter/material.dart';
-import 'package:mind_arena/screens/game/play_screen.dart';
-import 'package:mind_arena/screens/store/store_screen.dart';
-import 'package:mind_arena/screens/battle_pass/battle_pass_tab.dart';
-import 'package:mind_arena/screens/profile/profile_screen.dart';
+import 'package:mind_arena/models/user_model.dart';
+import 'package:mind_arena/screens/auth/login_screen.dart';
 import 'package:mind_arena/services/auth_service.dart';
-import 'package:mind_arena/widgets/animated_background.dart';
+import 'package:mind_arena/utils/app_constants.dart';
 import 'package:provider/provider.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+  
+  final List<Widget> _pages = [
+    const PlayScreen(),
+    const StoreScreen(),
+    const BattlePassScreen(),
+    const ProfileScreen(),
+  ];
+  
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+  
+  @override
   Widget build(BuildContext context) {
+    final User? currentUser = Provider.of<AuthService>(context).currentUser;
+    
     return Scaffold(
-      body: AnimatedBackground(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+      appBar: AppBar(
+        title: Text(
+          _selectedIndex == 0 ? 'MindArena' : _getTitle(_selectedIndex),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          // Tokens display
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Row(
               children: [
-                _buildHeader(context),
-                const SizedBox(height: 32),
-                _buildMainCard(
-                  context,
-                  title: 'Play Now',
-                  description: 'Challenge players in quick matches or play solo',
-                  gradientColors: [Colors.blue[700]!, Colors.blue[900]!],
-                  icon: Icons.play_circle_fill_rounded,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PlayScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
-                Expanded(
-                  child: Row(
-                    children: [
-                      _buildSecondaryCard(
-                        context,
-                        title: 'Battle Pass',
-                        gradientColors: [Colors.purple[700]!, Colors.purple[900]!],
-                        icon: Icons.workspace_premium_rounded,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const BattlePassTab(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 16),
-                      _buildSecondaryCard(
-                        context,
-                        title: 'Store',
-                        gradientColors: [Colors.green[700]!, Colors.green[900]!],
-                        icon: Icons.shopping_bag_rounded,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const StoreScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: Row(
-                    children: [
-                      _buildSecondaryCard(
-                        context,
-                        title: 'Tournaments',
-                        gradientColors: [Colors.amber[700]!, Colors.amber[900]!],
-                        icon: Icons.emoji_events_rounded,
-                        isDisabled: true,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Tournaments coming soon!'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 16),
-                      _buildSecondaryCard(
-                        context,
-                        title: 'Profile',
-                        gradientColors: [Colors.red[700]!, Colors.red[900]!],
-                        icon: Icons.person_rounded,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ProfileScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                const Icon(Icons.token, color: Colors.amber),
+                const SizedBox(width: 4),
+                Text(
+                  currentUser?.tokens.toString() ?? '0',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
               ],
             ),
           ),
-        ),
+          // Logout button
+          IconButton(
+            icon: const Icon(Icons.exit_to_app),
+            tooltip: 'Logout',
+            onPressed: () {
+              _handleLogout(context);
+            },
+          ),
+        ],
+      ),
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.sports_esports),
+            label: 'Play',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.store),
+            label: 'Store',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.card_membership),
+            label: 'Battle Pass',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        onTap: _onItemTapped,
       ),
     );
   }
-
-  Widget _buildHeader(BuildContext context) {
-    return Consumer<AuthService>(
-      builder: (context, authService, _) {
-        final user = authService.currentUser;
-        
-        return Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.5),
-                  width: 2,
-                ),
-                image: user?.avatarUrl != null
-                    ? DecorationImage(
-                        image: NetworkImage(user!.avatarUrl!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: user?.avatarUrl == null
-                  ? Icon(
-                      Icons.person,
-                      color: Colors.white.withOpacity(0.8),
-                      size: 30,
-                    )
-                  : null,
+  
+  String _getTitle(int index) {
+    switch (index) {
+      case 0:
+        return 'Play';
+      case 1:
+        return 'Store';
+      case 2:
+        return 'Battle Pass';
+      case 3:
+        return 'Profile';
+      default:
+        return 'MindArena';
+    }
+  }
+  
+  Future<void> _handleLogout(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome back,',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    user?.username ?? 'Guest',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Image.asset(
-                    'assets/images/token.png',
-                    width: 20,
-                    height: 20,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${user?.tokens ?? 0}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+            TextButton(
+              child: const Text('Logout'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                
+                final authService = Provider.of<AuthService>(context, listen: false);
+                await authService.signOut();
+                
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (Route<dynamic> route) => false,
+                );
+              },
             ),
           ],
         );
       },
     );
   }
+}
 
-  Widget _buildMainCard(
-    BuildContext context, {
-    required String title,
-    required String description,
-    required List<Color> gradientColors,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 120,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: gradientColors,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: gradientColors.first.withOpacity(0.4),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
+class PlayScreen extends StatelessWidget {
+  const PlayScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Hero section
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 70,
-              height: 70,
+            child: Container(
+              height: 180,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  colors: [Colors.purple, Colors.blue],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 40,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Quick Match',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Challenge players from around the world in real-time quiz battles!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Start matchmaking
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.purple,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: const Text(
+                        'PLAY NOW',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(width: 20),
-            Expanded(
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Game modes section
+          const Text(
+            'Game Modes',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          // Game mode cards
+          Row(
+            children: [
+              Expanded(
+                child: _buildGameModeCard(
+                  context,
+                  'Single Player',
+                  'Practice your skills',
+                  Icons.person,
+                  Colors.green,
+                  () {
+                    // Navigate to single player
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildGameModeCard(
+                  context,
+                  'Tournament',
+                  'Compete for prizes',
+                  Icons.emoji_events,
+                  Colors.orange,
+                  () {
+                    // Navigate to tournaments
+                  },
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          Row(
+            children: [
+              Expanded(
+                child: _buildGameModeCard(
+                  context,
+                  'Team Battles',
+                  'Play with friends',
+                  Icons.group,
+                  Colors.blue,
+                  () {
+                    // Navigate to team battles
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildGameModeCard(
+                  context,
+                  'Daily Challenge',
+                  'Earn bonus rewards',
+                  Icons.calendar_today,
+                  Colors.purple,
+                  () {
+                    // Navigate to daily challenge
+                  },
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Leaderboard preview
+          const Text(
+            'Leaderboard',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Top Players This Week',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // Navigate to full leaderboard
+                        },
+                        child: const Text('View All'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 14,
-                    ),
-                  ),
+                  const Divider(),
+                  _buildLeaderboardItem('1', 'Alex M.', '12,540 pts', Colors.amber),
+                  _buildLeaderboardItem('2', 'Jessica K.', '11,350 pts', Colors.grey.shade400),
+                  _buildLeaderboardItem('3', 'Michael S.', '10,845 pts', Colors.brown.shade300),
                 ],
               ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white,
-              size: 18,
-            ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildGameModeCard(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                icon,
+                color: color,
+                size: 32,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-
-  Widget _buildSecondaryCard(
-    BuildContext context, {
-    required String title,
-    required List<Color> gradientColors,
-    required IconData icon,
-    required VoidCallback onTap,
-    bool isDisabled = false,
-  }) {
-    return Expanded(
-      child: Opacity(
-        opacity: isDisabled ? 0.6 : 1.0,
-        child: GestureDetector(
-          onTap: isDisabled ? null : onTap,
-          child: Container(
-            padding: const EdgeInsets.all(16),
+  
+  Widget _buildLeaderboardItem(String rank, String name, String score, Color rankColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: gradientColors,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: gradientColors.first.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+              color: rankColor,
+              shape: BoxShape.circle,
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    color: Colors.white,
-                    size: 28,
-                  ),
+            child: Center(
+              child: Text(
+                rank,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (isDisabled) ...[
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'COMING SOON',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
-        ),
+          const SizedBox(width: 12),
+          Text(
+            name,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            score,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class StoreScreen extends StatelessWidget {
+  const StoreScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Store Screen'),
+    );
+  }
+}
+
+class BattlePassScreen extends StatelessWidget {
+  const BattlePassScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Battle Pass Screen'),
+    );
+  }
+}
+
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Profile Screen'),
     );
   }
 }

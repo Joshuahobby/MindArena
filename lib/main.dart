@@ -10,10 +10,12 @@ import 'package:mind_arena/services/database_service.dart';
 import 'package:mind_arena/services/firebase_service.dart';
 import 'package:mind_arena/services/database_service_factory.dart';
 import 'package:mind_arena/services/seed_service.dart';
+import 'package:mind_arena/services/auth_service.dart';
 import 'package:mind_arena/screens/auth/login_screen.dart';
 import 'package:mind_arena/screens/home/home_screen.dart';
+import 'package:mind_arena/screens/admin/admin_dashboard_screen.dart';
 import 'package:mind_arena/theme/app_theme.dart';
-import 'package:mind_arena/models/user_model.dart' as app_models;
+import 'package:mind_arena/models/user_model.dart';
 
 Future<void> main() async {
   developer.log('MindArena starting...');
@@ -92,64 +94,54 @@ class MindArenaApp extends StatefulWidget {
 }
 
 class _MindArenaAppState extends State<MindArenaApp> {
-  app_models.User? _currentUser;
-  bool _isLoading = true;
+  final AuthService _authService = AuthService();
+  bool _isInitialized = false;
   
   @override
   void initState() {
     super.initState();
-    _setupAuthListener();
+    _initializeServices();
   }
   
-  void _setupAuthListener() {
-    // Listen for auth state changes
-    FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+  Future<void> _initializeServices() async {
+    try {
+      await _authService.initialize();
       setState(() {
-        _isLoading = true;
+        _isInitialized = true;
       });
-      
-      if (user != null) {
-        try {
-          final firebaseService = FirebaseService();
-          final userProfile = await firebaseService.getCurrentUserProfile();
-          
-          setState(() {
-            _currentUser = userProfile;
-            _isLoading = false;
-          });
-        } catch (e) {
-          developer.log('Error getting user profile: $e');
-          setState(() {
-            _currentUser = null;
-            _isLoading = false;
-          });
-        }
-      } else {
-        setState(() {
-          _currentUser = null;
-          _isLoading = false;
-        });
-      }
-    });
+    } catch (e) {
+      developer.log('Error initializing auth service: $e');
+      // Still mark as initialized to allow the user to at least see the login screen
+      setState(() {
+        _isInitialized = true;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     developer.log('Building MindArenaApp');
-    return ChangeNotifierProvider(
-      create: (context) => AppState(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthService>.value(value: _authService),
+        ChangeNotifierProvider(create: (context) => AppState()),
+      ],
       child: MaterialApp(
         title: 'MindArena',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: _isLoading
+        home: !_isInitialized
             ? const _LoadingScreen()
-            : _currentUser != null
-                ? HomeScreen(user: _currentUser)
-                : const LoginScreen(),
+            : const AuthenticationWrapper(),
+        routes: {
+          '/login': (context) => const LoginScreen(),
+          '/home': (context) => const HomeScreen(),
+          '/admin': (context) => const AdminDashboardScreen(),
+        },
       ),
     );
   }
+}
 }
 
 class _LoadingScreen extends StatelessWidget {
