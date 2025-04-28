@@ -144,12 +144,43 @@ class _PlayScreenState extends State<PlayScreen> {
         Row(
           children: [
             Expanded(
-              child: _buildGameModeCard(
-                'Single Player',
-                'Practice with virtual bot',
-                Icons.person,
-                Colors.green,
-                _startSinglePlayerGame,
+              child: InkWell(
+                onTap: _startSinglePlayerGame,
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.person,
+                          color: Colors.green,
+                          size: 32,
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Single Player',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Practice with virtual bot',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 16),

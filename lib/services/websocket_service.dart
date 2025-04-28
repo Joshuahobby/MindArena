@@ -41,10 +41,12 @@ class WebSocketService with ChangeNotifier {
     // Listen for auth changes to connect/disconnect websocket
     _authService.addListener(_handleAuthChange);
     
-    // Connect if already authenticated
-    if (_authService.isAuthenticated) {
-      connect();
-    }
+    // Connect if already authenticated (delayed to ensure initialization)
+    Future.microtask(() {
+      if (_authService.isAuthenticated) {
+        connect();
+      }
+    });
   }
   
   bool get isConnected => _isConnected;
