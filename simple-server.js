@@ -612,10 +612,6 @@ app.get('/register', (req, res) => {
 });
 
 // Tournaments page route
-app.get('/tournaments', (req, res) => {
-  res.send(tournamentsPage);
-});
-
 app.get('/battle-pass', (req, res) => {
   res.send(`
     <!DOCTYPE html>
