@@ -1,58 +1,50 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Clan {
-  final String? id;
+  final String id;
   final String name;
   final String description;
   final String leaderId;
   final int membersCount;
   final int totalScore;
-  final String? bannerUrl;
   final String? avatarUrl;
-  final DateTime? createdAt;
   final List<ClanMember>? members;
-  
+  final List<ClanAchievement>? achievements;
+  final Map<String, dynamic>? weeklyStats;
+
   Clan({
-    this.id,
+    required this.id,
     required this.name,
     required this.description,
     required this.leaderId,
-    this.membersCount = 1,
-    this.totalScore = 0,
-    this.bannerUrl,
+    required this.membersCount,
+    required this.totalScore,
     this.avatarUrl,
-    this.createdAt,
     this.members,
+    this.achievements,
+    this.weeklyStats,
   });
-  
-  factory Clan.fromMap(Map<String, dynamic> map) {
-    List<ClanMember> membersList = [];
-    
-    if (map['members'] != null) {
-      membersList = (map['members'] as List).map((item) {
-        return ClanMember.fromMap(item);
-      }).toList();
-    }
-    
+
+  factory Clan.fromJson(Map<String, dynamic> json) {
     return Clan(
-      id: map['id'],
-      name: map['name'],
-      description: map['description'],
-      leaderId: map['leader_id'],
-      membersCount: map['members_count'] ?? 1,
-      totalScore: map['total_score'] ?? 0,
-      bannerUrl: map['banner_url'],
-      avatarUrl: map['avatar_url'],
-      createdAt: map['created_at'] is Timestamp
-        ? (map['created_at'] as Timestamp).toDate()
-        : map['created_at'] != null
-          ? DateTime.parse(map['created_at'])
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      leaderId: json['leader_id'] ?? '',
+      membersCount: json['members_count'] ?? 0,
+      totalScore: json['total_score'] ?? 0,
+      avatarUrl: json['avatar_url'],
+      members: json['members'] != null
+          ? List<ClanMember>.from(
+              json['members'].map((x) => ClanMember.fromJson(x)))
           : null,
-      members: membersList,
+      achievements: json['achievements'] != null
+          ? List<ClanAchievement>.from(
+              json['achievements'].map((x) => ClanAchievement.fromJson(x)))
+          : null,
+      weeklyStats: json['weekly_stats'],
     );
   }
-  
-  Map<String, dynamic> toMap() {
+
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
@@ -60,90 +52,250 @@ class Clan {
       'leader_id': leaderId,
       'members_count': membersCount,
       'total_score': totalScore,
-      'banner_url': bannerUrl,
       'avatar_url': avatarUrl,
-      'created_at': createdAt,
-      'members': members?.map((member) => member.toMap()).toList(),
+      'members': members?.map((x) => x.toJson()).toList(),
+      'achievements': achievements?.map((x) => x.toJson()).toList(),
+      'weekly_stats': weeklyStats,
     };
-  }
-  
-  bool isLeader(String userId) {
-    return leaderId == userId;
-  }
-  
-  bool isOfficer(String userId) {
-    if (members == null) return false;
-    
-    final member = members!.firstWhere(
-      (member) => member.userId == userId,
-      orElse: () => ClanMember(userId: '', clanId: '', role: ''),
-    );
-    
-    return member.role == 'officer';
-  }
-  
-  bool isMember(String userId) {
-    if (members == null) return false;
-    
-    return members!.any((member) => member.userId == userId);
-  }
-  
-  bool canManage(String userId) {
-    return isLeader(userId) || isOfficer(userId);
   }
 }
 
 class ClanMember {
-  final String? id;
   final String userId;
   final String clanId;
   final String role; // 'leader', 'officer', 'member'
-  final DateTime? joinedAt;
   final String? username;
   final String? displayName;
-  final String? avatarUrl;
-  
+  final int? contribution;
+  final DateTime? joinedAt;
+
   ClanMember({
-    this.id,
     required this.userId,
     required this.clanId,
     required this.role,
-    this.joinedAt,
     this.username,
     this.displayName,
-    this.avatarUrl,
+    this.contribution,
+    this.joinedAt,
   });
-  
-  factory ClanMember.fromMap(Map<String, dynamic> map) {
+
+  factory ClanMember.fromJson(Map<String, dynamic> json) {
     return ClanMember(
-      id: map['id'],
-      userId: map['user_id'],
-      clanId: map['clan_id'],
-      role: map['role'] ?? 'member',
-      joinedAt: map['joined_at'] is Timestamp
-        ? (map['joined_at'] as Timestamp).toDate()
-        : map['joined_at'] != null
-          ? DateTime.parse(map['joined_at'])
+      userId: json['user_id'] ?? '',
+      clanId: json['clan_id'] ?? '',
+      role: json['role'] ?? 'member',
+      username: json['username'],
+      displayName: json['display_name'],
+      contribution: json['contribution'],
+      joinedAt: json['joined_at'] != null
+          ? DateTime.parse(json['joined_at'])
           : null,
-      username: map['username'],
-      displayName: map['display_name'],
-      avatarUrl: map['avatar_url'],
     );
   }
-  
-  Map<String, dynamic> toMap() {
+
+  Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'user_id': userId,
       'clan_id': clanId,
       'role': role,
-      'joined_at': joinedAt,
       'username': username,
       'display_name': displayName,
-      'avatar_url': avatarUrl,
+      'contribution': contribution,
+      'joined_at': joinedAt?.toIso8601String(),
     };
   }
-  
+
+  // Getter to check if member is leader
   bool get isLeader => role == 'leader';
+
+  // Getter to check if member is officer
   bool get isOfficer => role == 'officer';
+}
+
+class ClanAchievement {
+  final String id;
+  final String clanId;
+  final String name;
+  final String description;
+  final String type; // 'tournaments', 'matches', 'seasons', etc.
+  final int points;
+  final DateTime earnedAt;
+  final String? iconUrl;
+
+  ClanAchievement({
+    required this.id,
+    required this.clanId,
+    required this.name,
+    required this.description,
+    required this.type,
+    required this.points,
+    required this.earnedAt,
+    this.iconUrl,
+  });
+
+  factory ClanAchievement.fromJson(Map<String, dynamic> json) {
+    return ClanAchievement(
+      id: json['id'] ?? '',
+      clanId: json['clan_id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      type: json['type'] ?? '',
+      points: json['points'] ?? 0,
+      earnedAt: json['earned_at'] != null
+          ? DateTime.parse(json['earned_at'])
+          : DateTime.now(),
+      iconUrl: json['icon_url'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'clan_id': clanId,
+      'name': name,
+      'description': description,
+      'type': type,
+      'points': points,
+      'earned_at': earnedAt.toIso8601String(),
+      'icon_url': iconUrl,
+    };
+  }
+}
+
+class ClanChallenge {
+  final String id;
+  final String name;
+  final String description;
+  final int target;
+  final int currentProgress;
+  final String type; // 'win_matches', 'tournaments', 'questions', etc.
+  final int reward;
+  final DateTime startDate;
+  final DateTime endDate;
+
+  ClanChallenge({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.target,
+    required this.currentProgress,
+    required this.type,
+    required this.reward,
+    required this.startDate,
+    required this.endDate,
+  });
+
+  factory ClanChallenge.fromJson(Map<String, dynamic> json) {
+    return ClanChallenge(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      target: json['target'] ?? 0,
+      currentProgress: json['current_progress'] ?? 0,
+      type: json['type'] ?? '',
+      reward: json['reward'] ?? 0,
+      startDate: json['start_date'] != null
+          ? DateTime.parse(json['start_date'])
+          : DateTime.now(),
+      endDate: json['end_date'] != null
+          ? DateTime.parse(json['end_date'])
+          : DateTime.now().add(const Duration(days: 7)),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'target': target,
+      'current_progress': currentProgress,
+      'type': type,
+      'reward': reward,
+      'start_date': startDate.toIso8601String(),
+      'end_date': endDate.toIso8601String(),
+    };
+  }
+
+  // Getter for progress percentage
+  double get progressPercentage => currentProgress / target;
+
+  // Getter to check if challenge is completed
+  bool get isCompleted => currentProgress >= target;
+
+  // Getter to check if challenge is active
+  bool get isActive {
+    final now = DateTime.now();
+    return now.isAfter(startDate) && now.isBefore(endDate);
+  }
+
+  // Getter to check if challenge is expired
+  bool get isExpired {
+    final now = DateTime.now();
+    return now.isAfter(endDate);
+  }
+}
+
+class ClanInvitation {
+  final String id;
+  final String clanId;
+  final String userId;
+  final String inviterId;
+  final DateTime createdAt;
+  final DateTime expiresAt;
+  final String status; // 'pending', 'accepted', 'rejected', 'expired'
+
+  ClanInvitation({
+    required this.id,
+    required this.clanId,
+    required this.userId,
+    required this.inviterId,
+    required this.createdAt,
+    required this.expiresAt,
+    required this.status,
+  });
+
+  factory ClanInvitation.fromJson(Map<String, dynamic> json) {
+    return ClanInvitation(
+      id: json['id'] ?? '',
+      clanId: json['clan_id'] ?? '',
+      userId: json['user_id'] ?? '',
+      inviterId: json['inviter_id'] ?? '',
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
+      expiresAt: json['expires_at'] != null
+          ? DateTime.parse(json['expires_at'])
+          : DateTime.now().add(const Duration(days: 7)),
+      status: json['status'] ?? 'pending',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'clan_id': clanId,
+      'user_id': userId,
+      'inviter_id': inviterId,
+      'created_at': createdAt.toIso8601String(),
+      'expires_at': expiresAt.toIso8601String(),
+      'status': status,
+    };
+  }
+
+  // Getter to check if invitation is pending
+  bool get isPending => status == 'pending';
+
+  // Getter to check if invitation is accepted
+  bool get isAccepted => status == 'accepted';
+
+  // Getter to check if invitation is rejected
+  bool get isRejected => status == 'rejected';
+
+  // Getter to check if invitation is expired
+  bool get isExpired {
+    if (status == 'expired') return true;
+    final now = DateTime.now();
+    return now.isAfter(expiresAt);
+  }
 }

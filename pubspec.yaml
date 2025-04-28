@@ -27,16 +27,45 @@ dependencies:
   # UI enhancements
   flutter_svg: ^2.0.9
   cached_network_image: ^3.3.0
+  confetti: ^0.7.0
+  shimmer: ^3.0.0
+  percent_indicator: ^4.2.3
+  fl_chart: ^0.64.0
   # Animation
   lottie: ^2.7.0
+  animate_do: ^3.1.2
   # Utilities
   uuid: ^4.2.1
   intl: ^0.18.1
+  connectivity_plus: ^5.0.1
+  # Game mechanics
+  countdown_timer_simple: ^2.0.0
+  flutter_timer_countdown: ^1.0.5
+  # Overlay notifications
+  fluttertoast: ^8.2.4
+  overlay_support: ^2.1.0
+  # WebSockets for multiplayer
+  web_socket_channel: ^2.4.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.1
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.5
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  adaptive_icon_background: "#6C5CE7"
+  adaptive_icon_foreground: "assets/images/app_icon_foreground.png"
+
+flutter_native_splash:
+  color: "#6C5CE7"
+  image: assets/images/splash_logo.png
+  android: true
+  ios: true
 
 flutter:
   uses-material-design: true
@@ -45,3 +74,16 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/animations/
+    
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Regular.ttf
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Montserrat-Light.ttf
+          weight: 300

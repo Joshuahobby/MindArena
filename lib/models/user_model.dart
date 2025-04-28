@@ -1,55 +1,109 @@
 class User {
   final int? id;
   final String username;
-  final String email;
   final String? displayName;
+  final String email;
   final String? avatarUrl;
-  final int coins;
-  final int experiencePoints;
   final int level;
-  final DateTime? createdAt;
+  final int experiencePoints;
+  final int coins;
+  final bool isPremium;
+  final Map<String, dynamic>? stats;
+  final List<String>? achievements;
+  final String? clanId;
 
   User({
     this.id,
     required this.username,
-    required this.email,
     this.displayName,
+    required this.email,
     this.avatarUrl,
-    this.coins = 0,
-    this.experiencePoints = 0,
     this.level = 1,
-    this.createdAt,
+    this.experiencePoints = 0,
+    this.coins = 0,
+    this.isPremium = false,
+    this.stats,
+    this.achievements,
+    this.clanId,
   });
 
-  factory User.fromMap(Map<String, dynamic> map) {
+  User.empty()
+      : id = null,
+        username = '',
+        displayName = null,
+        email = '',
+        avatarUrl = null,
+        level = 1,
+        experiencePoints = 0,
+        coins = 0,
+        isPremium = false,
+        stats = null,
+        achievements = null,
+        clanId = null;
+
+  factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: map['id'],
-      username: map['username'],
-      email: map['email'],
-      displayName: map['display_name'],
-      avatarUrl: map['avatar_url'],
-      coins: map['coins'] ?? 0,
-      experiencePoints: map['experience_points'] ?? 0,
-      level: map['level'] ?? 1,
-      createdAt: map['created_at'] != null 
-        ? map['created_at'] is DateTime 
-          ? map['created_at'] 
-          : DateTime.parse(map['created_at'])
-        : null,
+      id: json['id'],
+      username: json['username'] ?? '',
+      displayName: json['display_name'],
+      email: json['email'] ?? '',
+      avatarUrl: json['avatar_url'],
+      level: json['level'] ?? 1,
+      experiencePoints: json['experience_points'] ?? 0,
+      coins: json['coins'] ?? 0,
+      isPremium: json['is_premium'] ?? false,
+      stats: json['stats'],
+      achievements: json['achievements'] != null
+          ? List<String>.from(json['achievements'])
+          : null,
+      clanId: json['clan_id'],
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'username': username,
-      'email': email,
       'display_name': displayName,
+      'email': email,
       'avatar_url': avatarUrl,
-      'coins': coins,
-      'experience_points': experiencePoints,
       'level': level,
-      'created_at': createdAt?.toIso8601String(),
+      'experience_points': experiencePoints,
+      'coins': coins,
+      'is_premium': isPremium,
+      'stats': stats,
+      'achievements': achievements,
+      'clan_id': clanId,
     };
+  }
+
+  User copyWith({
+    int? id,
+    String? username,
+    String? displayName,
+    String? email,
+    String? avatarUrl,
+    int? level,
+    int? experiencePoints,
+    int? coins,
+    bool? isPremium,
+    Map<String, dynamic>? stats,
+    List<String>? achievements,
+    String? clanId,
+  }) {
+    return User(
+      id: id ?? this.id,
+      username: username ?? this.username,
+      displayName: displayName ?? this.displayName,
+      email: email ?? this.email,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      level: level ?? this.level,
+      experiencePoints: experiencePoints ?? this.experiencePoints,
+      coins: coins ?? this.coins,
+      isPremium: isPremium ?? this.isPremium,
+      stats: stats ?? this.stats,
+      achievements: achievements ?? this.achievements,
+      clanId: clanId ?? this.clanId,
+    );
   }
 }

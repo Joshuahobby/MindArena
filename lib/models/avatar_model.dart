@@ -1,151 +1,176 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Avatar {
-  final String? id;
+  final String id;
   final String name;
   final String imageUrl;
-  final int cost;
   final String rarity; // 'common', 'rare', 'epic', 'legendary'
-  final bool isDefault;
-  final bool isPurchasable;
-  final String? categoryId;
-  final String? categoryName;
-  final DateTime? createdAt;
-  final bool? unlocked; // Client-side only, not stored in Firestore
-  
+  final String? description;
+  final String? category;
+  final int? cost;
+  final String? obtainMethod; // 'purchase', 'battle_pass', 'achievement', etc.
+  final bool? isLimited;
+  final DateTime? releasedAt;
+  final Map<String, dynamic>? customization;
+
   Avatar({
-    this.id,
+    required this.id,
     required this.name,
     required this.imageUrl,
-    required this.cost,
     required this.rarity,
-    this.isDefault = false,
-    this.isPurchasable = true,
-    this.categoryId,
-    this.categoryName,
-    this.createdAt,
-    this.unlocked,
+    this.description,
+    this.category,
+    this.cost,
+    this.obtainMethod,
+    this.isLimited,
+    this.releasedAt,
+    this.customization,
   });
-  
-  factory Avatar.fromMap(Map<String, dynamic> map) {
+
+  factory Avatar.fromJson(Map<String, dynamic> json) {
     return Avatar(
-      id: map['id'],
-      name: map['name'],
-      imageUrl: map['image_url'],
-      cost: map['cost'] ?? 0,
-      rarity: map['rarity'] ?? 'common',
-      isDefault: map['is_default'] ?? false,
-      isPurchasable: map['is_purchasable'] ?? true,
-      categoryId: map['category_id'],
-      categoryName: map['category_name'],
-      createdAt: map['created_at'] is Timestamp
-        ? (map['created_at'] as Timestamp).toDate()
-        : map['created_at'] != null
-          ? DateTime.parse(map['created_at'])
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      imageUrl: json['image_url'] ?? '',
+      rarity: json['rarity'] ?? 'common',
+      description: json['description'],
+      category: json['category'],
+      cost: json['cost'],
+      obtainMethod: json['obtain_method'],
+      isLimited: json['is_limited'],
+      releasedAt: json['released_at'] != null
+          ? DateTime.parse(json['released_at'])
           : null,
-      unlocked: map['unlocked'],
+      customization: json['customization'],
     );
   }
-  
-  Map<String, dynamic> toMap() {
+
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
       'image_url': imageUrl,
-      'cost': cost,
       'rarity': rarity,
-      'is_default': isDefault,
-      'is_purchasable': isPurchasable,
-      'category_id': categoryId,
-      'category_name': categoryName,
-      'created_at': createdAt,
-      'unlocked': unlocked,
+      'description': description,
+      'category': category,
+      'cost': cost,
+      'obtain_method': obtainMethod,
+      'is_limited': isLimited,
+      'released_at': releasedAt?.toIso8601String(),
+      'customization': customization,
     };
   }
-  
+
   // Get color based on rarity
-  int get rarityColor {
+  static Map<String, dynamic> getRarityData(String rarity) {
     switch (rarity.toLowerCase()) {
       case 'common':
-        return 0xFF8E8E8E; // Gray
+        return {
+          'color': 0xFF808080, // Gray
+          'label': 'Common',
+          'borderColor': 0xFFBBBBBB,
+          'gradient': [0xFF808080, 0xFF646464],
+        };
       case 'rare':
-        return 0xFF2196F3; // Blue
+        return {
+          'color': 0xFF0070DD, // Blue
+          'label': 'Rare',
+          'borderColor': 0xFF40A0FF,
+          'gradient': [0xFF0070DD, 0xFF0050AA],
+        };
       case 'epic':
-        return 0xFF9C27B0; // Purple
+        return {
+          'color': 0xFFA335EE, // Purple
+          'label': 'Epic',
+          'borderColor': 0xFFC060FF,
+          'gradient': [0xFFA335EE, 0xFF800080],
+        };
       case 'legendary':
-        return 0xFFFF9800; // Orange
+        return {
+          'color': 0xFFFF8000, // Orange
+          'label': 'Legendary',
+          'borderColor': 0xFFFFAA00,
+          'gradient': [0xFFFF8000, 0xFFCC5500],
+        };
       default:
-        return 0xFF8E8E8E; // Gray
+        return {
+          'color': 0xFF808080, // Gray
+          'label': 'Common',
+          'borderColor': 0xFFBBBBBB,
+          'gradient': [0xFF808080, 0xFF646464],
+        };
     }
-  }
-}
-
-class AvatarCategory {
-  final String? id;
-  final String name;
-  final String? description;
-  final String? iconUrl;
-  final int displayOrder;
-  
-  AvatarCategory({
-    this.id,
-    required this.name,
-    this.description,
-    this.iconUrl,
-    this.displayOrder = 0,
-  });
-  
-  factory AvatarCategory.fromMap(Map<String, dynamic> map) {
-    return AvatarCategory(
-      id: map['id'],
-      name: map['name'],
-      description: map['description'],
-      iconUrl: map['icon_url'],
-      displayOrder: map['display_order'] ?? 0,
-    );
-  }
-  
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'description': description,
-      'icon_url': iconUrl,
-      'display_order': displayOrder,
-    };
   }
 }
 
 class UserAvatar {
   final String userId;
   final String avatarId;
-  final DateTime purchasedAt;
-  final bool isActive;
-  
+  final bool isEquipped;
+  final DateTime acquiredAt;
+  final String? source; // How the user got this avatar
+
   UserAvatar({
     required this.userId,
     required this.avatarId,
-    required this.purchasedAt,
-    this.isActive = false,
+    required this.isEquipped,
+    required this.acquiredAt,
+    this.source,
   });
-  
-  factory UserAvatar.fromMap(Map<String, dynamic> map) {
+
+  factory UserAvatar.fromJson(Map<String, dynamic> json) {
     return UserAvatar(
-      userId: map['user_id'],
-      avatarId: map['avatar_id'],
-      purchasedAt: map['purchased_at'] is Timestamp
-        ? (map['purchased_at'] as Timestamp).toDate()
-        : DateTime.parse(map['purchased_at']),
-      isActive: map['is_active'] ?? false,
+      userId: json['user_id'] ?? '',
+      avatarId: json['avatar_id'] ?? '',
+      isEquipped: json['is_equipped'] ?? false,
+      acquiredAt: json['acquired_at'] != null
+          ? DateTime.parse(json['acquired_at'])
+          : DateTime.now(),
+      source: json['source'],
     );
   }
-  
-  Map<String, dynamic> toMap() {
+
+  Map<String, dynamic> toJson() {
     return {
       'user_id': userId,
       'avatar_id': avatarId,
-      'purchased_at': purchasedAt,
-      'is_active': isActive,
+      'is_equipped': isEquipped,
+      'acquired_at': acquiredAt.toIso8601String(),
+      'source': source,
+    };
+  }
+}
+
+class AvatarCategory {
+  final String id;
+  final String name;
+  final String? description;
+  final String? iconName;
+  final int? displayOrder;
+
+  AvatarCategory({
+    required this.id,
+    required this.name,
+    this.description,
+    this.iconName,
+    this.displayOrder,
+  });
+
+  factory AvatarCategory.fromJson(Map<String, dynamic> json) {
+    return AvatarCategory(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'],
+      iconName: json['icon_name'],
+      displayOrder: json['display_order'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'icon_name': iconName,
+      'display_order': displayOrder,
     };
   }
 }

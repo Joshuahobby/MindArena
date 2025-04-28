@@ -1,197 +1,280 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-class BattlePassReward {
-  final int tier;
-  final String type; // 'coins', 'avatar', 'experience', etc.
+class BattlePass {
+  final String id;
   final String name;
   final String description;
-  final String? imageUrl;
-  final int? amount; // For coins or experience
-  final String? avatarId; // For avatar rewards
-  final bool isPremium; // Whether this reward is for premium pass holders only
-  
-  BattlePassReward({
-    required this.tier,
-    required this.type,
-    required this.name,
-    required this.description,
-    this.imageUrl,
-    this.amount,
-    this.avatarId,
-    this.isPremium = false,
-  });
-  
-  factory BattlePassReward.fromMap(Map<String, dynamic> map) {
-    return BattlePassReward(
-      tier: map['tier'],
-      type: map['type'],
-      name: map['name'],
-      description: map['description'],
-      imageUrl: map['image_url'],
-      amount: map['amount'],
-      avatarId: map['avatar_id'],
-      isPremium: map['is_premium'] ?? false,
-    );
-  }
-  
-  Map<String, dynamic> toMap() {
-    return {
-      'tier': tier,
-      'type': type,
-      'name': name,
-      'description': description,
-      'image_url': imageUrl,
-      'amount': amount,
-      'avatar_id': avatarId,
-      'is_premium': isPremium,
-    };
-  }
-}
-
-class BattlePass {
-  final String? id;
-  final String name;
   final DateTime startDate;
   final DateTime endDate;
+  final int maxTier;
   final int premiumCost;
-  final List<BattlePassReward> rewards;
-  final DateTime? createdAt;
-  
+  final String theme;
+  final List<BattlePassReward>? rewards;
+  final List<BattlePassChallenge>? challenges;
+
   BattlePass({
-    this.id,
+    required this.id,
     required this.name,
+    required this.description,
     required this.startDate,
     required this.endDate,
+    required this.maxTier,
     required this.premiumCost,
-    required this.rewards,
-    this.createdAt,
+    required this.theme,
+    this.rewards,
+    this.challenges,
   });
-  
-  factory BattlePass.fromMap(Map<String, dynamic> map) {
-    List<BattlePassReward> rewardsList = [];
-    
-    if (map['rewards'] != null) {
-      rewardsList = (map['rewards'] as List).map((item) {
-        return BattlePassReward.fromMap(item);
-      }).toList();
-      
-      // Sort rewards by tier
-      rewardsList.sort((a, b) => a.tier.compareTo(b.tier));
-    }
-    
+
+  factory BattlePass.fromJson(Map<String, dynamic> json) {
     return BattlePass(
-      id: map['id'],
-      name: map['name'],
-      startDate: map['start_date'] is Timestamp
-        ? (map['start_date'] as Timestamp).toDate()
-        : DateTime.parse(map['start_date']),
-      endDate: map['end_date'] is Timestamp
-        ? (map['end_date'] as Timestamp).toDate()
-        : DateTime.parse(map['end_date']),
-      premiumCost: map['premium_cost'] ?? 1000,
-      rewards: rewardsList,
-      createdAt: map['created_at'] is Timestamp
-        ? (map['created_at'] as Timestamp).toDate()
-        : map['created_at'] != null
-          ? DateTime.parse(map['created_at'])
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      startDate: json['start_date'] != null
+          ? DateTime.parse(json['start_date'])
+          : DateTime.now(),
+      endDate: json['end_date'] != null
+          ? DateTime.parse(json['end_date'])
+          : DateTime.now().add(const Duration(days: 30)),
+      maxTier: json['max_tier'] ?? 100,
+      premiumCost: json['premium_cost'] ?? 950,
+      theme: json['theme'] ?? 'default',
+      rewards: json['rewards'] != null
+          ? List<BattlePassReward>.from(
+              json['rewards'].map((x) => BattlePassReward.fromJson(x)))
+          : null,
+      challenges: json['challenges'] != null
+          ? List<BattlePassChallenge>.from(
+              json['challenges'].map((x) => BattlePassChallenge.fromJson(x)))
           : null,
     );
   }
-  
-  Map<String, dynamic> toMap() {
+
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
-      'start_date': startDate,
-      'end_date': endDate,
+      'description': description,
+      'start_date': startDate.toIso8601String(),
+      'end_date': endDate.toIso8601String(),
+      'max_tier': maxTier,
       'premium_cost': premiumCost,
-      'rewards': rewards.map((reward) => reward.toMap()).toList(),
-      'created_at': createdAt,
+      'theme': theme,
+      'rewards': rewards?.map((x) => x.toJson()).toList(),
+      'challenges': challenges?.map((x) => x.toJson()).toList(),
     };
   }
-  
+
+  // Getter to check if battle pass is active
   bool get isActive {
     final now = DateTime.now();
     return now.isAfter(startDate) && now.isBefore(endDate);
   }
-  
-  int get daysRemaining {
+
+  // Getter to check if battle pass is upcoming
+  bool get isUpcoming {
     final now = DateTime.now();
-    if (now.isAfter(endDate)) return 0;
+    return now.isBefore(startDate);
+  }
+
+  // Getter to check if battle pass is expired
+  bool get isExpired {
+    final now = DateTime.now();
+    return now.isAfter(endDate);
+  }
+
+  // Getter to get remaining days
+  int get remainingDays {
+    final now = DateTime.now();
+    if (isExpired) return 0;
     return endDate.difference(now).inDays;
   }
-  
-  double get progressPercentage {
+}
+
+class BattlePassReward {
+  final int tier;
+  final String name;
+  final String description;
+  final String type; // 'coins', 'experience', 'avatar', 'emote', etc.
+  final int? amount; // For coins, experience, etc.
+  final String? itemId; // For avatars, emotes, etc.
+  final bool isPremium;
+  final String? imageUrl;
+
+  BattlePassReward({
+    required this.tier,
+    required this.name,
+    required this.description,
+    required this.type,
+    this.amount,
+    this.itemId,
+    this.isPremium = false,
+    this.imageUrl,
+  });
+
+  factory BattlePassReward.fromJson(Map<String, dynamic> json) {
+    return BattlePassReward(
+      tier: json['tier'] ?? 0,
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      type: json['type'] ?? '',
+      amount: json['amount'],
+      itemId: json['item_id'],
+      isPremium: json['is_premium'] ?? false,
+      imageUrl: json['image_url'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'tier': tier,
+      'name': name,
+      'description': description,
+      'type': type,
+      'amount': amount,
+      'item_id': itemId,
+      'is_premium': isPremium,
+      'image_url': imageUrl,
+    };
+  }
+}
+
+class BattlePassChallenge {
+  final String id;
+  final String name;
+  final String description;
+  final int experiencePoints;
+  final String type; // 'daily', 'weekly', 'seasonal'
+  final String category; // 'win_matches', 'answer_questions', etc.
+  final int target;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  BattlePassChallenge({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.experiencePoints,
+    required this.type,
+    required this.category,
+    required this.target,
+    this.startDate,
+    this.endDate,
+  });
+
+  factory BattlePassChallenge.fromJson(Map<String, dynamic> json) {
+    return BattlePassChallenge(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      experiencePoints: json['experience_points'] ?? 0,
+      type: json['type'] ?? 'daily',
+      category: json['category'] ?? '',
+      target: json['target'] ?? 0,
+      startDate: json['start_date'] != null
+          ? DateTime.parse(json['start_date'])
+          : null,
+      endDate: json['end_date'] != null
+          ? DateTime.parse(json['end_date'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'experience_points': experiencePoints,
+      'type': type,
+      'category': category,
+      'target': target,
+      'start_date': startDate?.toIso8601String(),
+      'end_date': endDate?.toIso8601String(),
+    };
+  }
+
+  // Getter to check if challenge is active
+  bool get isActive {
+    if (startDate == null || endDate == null) return true;
     final now = DateTime.now();
-    if (now.isBefore(startDate)) return 0.0;
-    if (now.isAfter(endDate)) return 1.0;
-    
-    final totalDuration = endDate.difference(startDate).inMilliseconds;
-    final elapsed = now.difference(startDate).inMilliseconds;
-    
-    return elapsed / totalDuration;
+    return now.isAfter(startDate!) && now.isBefore(endDate!);
   }
 }
 
 class UserBattlePass {
   final String userId;
   final String battlePassId;
-  final bool isPremium;
   final int currentTier;
   final int experiencePoints;
-  final List<int> unlockedRewardTiers;
-  final List<int> claimedRewardTiers;
-  
+  final bool isPremium;
+  final List<int>? claimedTiers;
+  final List<int>? claimedPremiumTiers;
+  final Map<String, int>? challengeProgress;
+
   UserBattlePass({
     required this.userId,
     required this.battlePassId,
-    this.isPremium = false,
-    this.currentTier = 0,
-    this.experiencePoints = 0,
-    this.unlockedRewardTiers = const [],
-    this.claimedRewardTiers = const [],
+    required this.currentTier,
+    required this.experiencePoints,
+    required this.isPremium,
+    this.claimedTiers,
+    this.claimedPremiumTiers,
+    this.challengeProgress,
   });
-  
-  factory UserBattlePass.fromMap(Map<String, dynamic> map) {
+
+  factory UserBattlePass.fromJson(Map<String, dynamic> json) {
     return UserBattlePass(
-      userId: map['user_id'],
-      battlePassId: map['battle_pass_id'],
-      isPremium: map['is_premium'] ?? false,
-      currentTier: map['current_tier'] ?? 0,
-      experiencePoints: map['experience_points'] ?? 0,
-      unlockedRewardTiers: map['unlocked_reward_tiers'] != null
-        ? List<int>.from(map['unlocked_reward_tiers'])
-        : [],
-      claimedRewardTiers: map['claimed_reward_tiers'] != null
-        ? List<int>.from(map['claimed_reward_tiers'])
-        : [],
+      userId: json['user_id'] ?? '',
+      battlePassId: json['battle_pass_id'] ?? '',
+      currentTier: json['current_tier'] ?? 0,
+      experiencePoints: json['experience_points'] ?? 0,
+      isPremium: json['is_premium'] ?? false,
+      claimedTiers: json['claimed_tiers'] != null
+          ? List<int>.from(json['claimed_tiers'])
+          : null,
+      claimedPremiumTiers: json['claimed_premium_tiers'] != null
+          ? List<int>.from(json['claimed_premium_tiers'])
+          : null,
+      challengeProgress: json['challenge_progress'] != null
+          ? Map<String, int>.from(json['challenge_progress'])
+          : null,
     );
   }
-  
-  Map<String, dynamic> toMap() {
+
+  Map<String, dynamic> toJson() {
     return {
       'user_id': userId,
       'battle_pass_id': battlePassId,
-      'is_premium': isPremium,
       'current_tier': currentTier,
       'experience_points': experiencePoints,
-      'unlocked_reward_tiers': unlockedRewardTiers,
-      'claimed_reward_tiers': claimedRewardTiers,
+      'is_premium': isPremium,
+      'claimed_tiers': claimedTiers,
+      'claimed_premium_tiers': claimedPremiumTiers,
+      'challenge_progress': challengeProgress,
     };
   }
-  
-  bool canClaimReward(int tier, bool isPremiumReward) {
-    // If reward is premium and user doesn't have premium pass
-    if (isPremiumReward && !this.isPremium) {
-      return false;
+
+  // Get the experience points needed for the next tier
+  int getNextTierRequirement(int tier) {
+    return 1000 + (tier * 100); // Example calculation
+  }
+
+  // Check if a tier reward is claimed
+  bool isTierClaimed(int tier, bool isPremiumReward) {
+    if (isPremiumReward) {
+      return claimedPremiumTiers?.contains(tier) ?? false;
+    } else {
+      return claimedTiers?.contains(tier) ?? false;
     }
-    
-    // If tier is already claimed
-    if (claimedRewardTiers.contains(tier)) {
-      return false;
-    }
-    
-    // If tier is unlocked
-    return unlockedRewardTiers.contains(tier) || currentTier >= tier;
+  }
+
+  // Check if a tier is unlocked
+  bool isTierUnlocked(int tier) {
+    return currentTier >= tier;
+  }
+
+  // Get the progress percentage towards the next tier
+  double getProgressToNextTier() {
+    final nextTierRequirement = getNextTierRequirement(currentTier + 1);
+    return experiencePoints / nextTierRequirement;
   }
 }
