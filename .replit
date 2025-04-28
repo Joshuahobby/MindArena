@@ -18,7 +18,7 @@ args = "MindArena Server"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "MindArena Simple Server"
+args = "MindArena Basic"
 
 [[workflows.workflow]]
 name = "MindArena Server"
@@ -30,12 +30,12 @@ args = "node server.js"
 waitForPort = 5000
 
 [[workflows.workflow]]
-name = "MindArena Simple Server"
+name = "MindArena Basic"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node simple-server.js"
+args = "node basic-server.js"
 waitForPort = 5000
 
 [deployment]
