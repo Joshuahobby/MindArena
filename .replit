@@ -16,10 +16,6 @@ author = "agent"
 task = "workflow.run"
 args = "MindArena Server"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "MindArena Basic"
-
 [[workflows.workflow]]
 name = "MindArena Server"
 author = "agent"
@@ -27,15 +23,6 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node server.js"
-waitForPort = 5000
-
-[[workflows.workflow]]
-name = "MindArena Basic"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node basic-server.js"
 waitForPort = 5000
 
 [deployment]
