@@ -1,8 +1,8 @@
-modules = ["flutter"]
+modules = ["flutter", "nodejs-20"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["flutter"]
+packages = ["flutter", "nodejs"]
 
 [workflows]
 runButton = "Project"
@@ -14,15 +14,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "MindArena App"
+args = "MindArena Web Demo"
 
 [[workflows.workflow]]
-name = "MindArena App"
+name = "MindArena Web Demo"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flutter run -d web-server --web-port 5000 --web-hostname 0.0.0.0"
+args = "node server.js"
 waitForPort = 5000
 
 [deployment]

@@ -1,93 +1,118 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+class QuestionCategory {
+  final int? id;
+  final String name;
+  final String? description;
+  final String? iconUrl;
 
-class QuestionModel {
-  final String id;
-  final String category;
-  final String question;
-  final List<String> options;
-  final int correctOptionIndex;
-  final int difficulty; // 1-3 (easy, medium, hard)
-  final String? explanation;
-  final bool isActive;
-
-  QuestionModel({
-    required this.id,
-    required this.category,
-    required this.question,
-    required this.options,
-    required this.correctOptionIndex,
-    required this.difficulty,
-    this.explanation,
-    this.isActive = true,
+  QuestionCategory({
+    this.id,
+    required this.name,
+    this.description,
+    this.iconUrl,
   });
 
-  // Create a QuestionModel from a Firebase document
-  factory QuestionModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    
-    return QuestionModel(
-      id: doc.id,
-      category: data['category'] ?? '',
-      question: data['question'] ?? '',
-      options: List<String>.from(data['options'] ?? []),
-      correctOptionIndex: data['correctOptionIndex'] ?? 0,
-      difficulty: data['difficulty'] ?? 1,
-      explanation: data['explanation'],
-      isActive: data['isActive'] ?? true,
+  factory QuestionCategory.fromMap(Map<String, dynamic> map) {
+    return QuestionCategory(
+      id: map['id'],
+      name: map['name'],
+      description: map['description'],
+      iconUrl: map['icon_url'],
     );
   }
 
-  // Convert QuestionModel to a Map for Firestore
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toMap() {
     return {
-      'category': category,
-      'question': question,
-      'options': options,
-      'correctOptionIndex': correctOptionIndex,
-      'difficulty': difficulty,
-      'explanation': explanation,
-      'isActive': isActive,
+      'id': id,
+      'name': name,
+      'description': description,
+      'icon_url': iconUrl,
     };
   }
+}
 
-  // Create a copy of the QuestionModel with updated fields
-  QuestionModel copyWith({
-    String? id,
-    String? category,
-    String? question,
-    List<String>? options,
-    int? correctOptionIndex,
-    int? difficulty,
-    String? explanation,
-    bool? isActive,
-  }) {
-    return QuestionModel(
-      id: id ?? this.id,
-      category: category ?? this.category,
-      question: question ?? this.question,
-      options: options ?? this.options,
-      correctOptionIndex: correctOptionIndex ?? this.correctOptionIndex,
-      difficulty: difficulty ?? this.difficulty,
-      explanation: explanation ?? this.explanation,
-      isActive: isActive ?? this.isActive,
+class QuestionAnswer {
+  final int? id;
+  final int? questionId;
+  final String answerText;
+  final bool isCorrect;
+
+  QuestionAnswer({
+    this.id,
+    this.questionId,
+    required this.answerText,
+    required this.isCorrect,
+  });
+
+  factory QuestionAnswer.fromMap(Map<String, dynamic> map) {
+    return QuestionAnswer(
+      id: map['id'],
+      questionId: map['question_id'],
+      answerText: map['answer_text'],
+      isCorrect: map['is_correct'],
     );
   }
 
-  // Get the correct answer
-  String get correctAnswer {
-    if (correctOptionIndex >= 0 && correctOptionIndex < options.length) {
-      return options[correctOptionIndex];
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'question_id': questionId,
+      'answer_text': answerText,
+      'is_correct': isCorrect,
+    };
+  }
+}
+
+class Question {
+  final int? id;
+  final int? categoryId;
+  final String questionText;
+  final int difficulty; // 1=Easy, 2=Medium, 3=Hard
+  final DateTime? createdAt;
+  final String? categoryName;
+  final List<QuestionAnswer> answers;
+
+  Question({
+    this.id,
+    this.categoryId,
+    required this.questionText,
+    required this.difficulty,
+    this.createdAt,
+    this.categoryName,
+    this.answers = const [],
+  });
+
+  factory Question.fromMap(Map<String, dynamic> map) {
+    List<QuestionAnswer> answers = [];
+    if (map['answers'] != null && map['answers'] is List) {
+      answers = (map['answers'] as List)
+          .map((item) => QuestionAnswer.fromMap(item))
+          .toList();
     }
-    return '';
+
+    return Question(
+      id: map['id'],
+      categoryId: map['category_id'],
+      questionText: map['question_text'],
+      difficulty: map['difficulty'],
+      categoryName: map['category_name'],
+      createdAt: map['created_at'] != null 
+        ? map['created_at'] is DateTime 
+          ? map['created_at'] 
+          : DateTime.parse(map['created_at'])
+        : null,
+      answers: answers,
+    );
   }
 
-  // Get points based on difficulty
-  int get basePoints {
-    switch (difficulty) {
-      case 1: return 100;  // Easy
-      case 2: return 150;  // Medium
-      case 3: return 200;  // Hard
-      default: return 100;
-    }
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'category_id': categoryId,
+      'question_text': questionText,
+      'difficulty': difficulty,
+      'created_at': createdAt?.toIso8601String(),
+      'category_name': categoryName,
+      'answers': answers.map((answer) => answer.toMap()).toList(),
+    };
   }
 }
