@@ -39,8 +39,35 @@ const commonJsForHead = `
     }
   }
   
-  // Auto-fix for profile avatar click handlers
+  // Universal logout function that works across all pages
+  function handleLogout() {
+    // Try to use Firebase auth if available
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      firebase.auth().signOut()
+        .then(() => {
+          // Sign-out successful, redirect to home
+          window.location.href = '/';
+        })
+        .catch((error) => {
+          // An error happened
+          console.error('Logout error:', error);
+          alert('Error during logout. Please try again.');
+        });
+    } else {
+      // Fallback for pages without Firebase initialized
+      window.location.href = '/';
+    }
+  }
+  
+  // Fix account settings link
   document.addEventListener('DOMContentLoaded', function() {
+    // Find all account settings links and update them to go to dashboard
+    const accountLinks = document.querySelectorAll('.dropdown-item[onclick*="account"]');
+    accountLinks.forEach(link => {
+      link.setAttribute('onclick', "window.location.href='/dashboard'");
+    });
+    
+    // Auto-fix for profile avatar click handlers
     const profileAvatar = document.getElementById('profileInitial');
     if (profileAvatar) {
       // Remove the inline onclick attribute to prevent multiple handlers
