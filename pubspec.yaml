@@ -46,6 +46,8 @@ dependencies:
   overlay_support: ^2.1.0
   # WebSockets for multiplayer
   web_socket_channel: ^2.4.0
+  # Payment integration
+  flutterwave_standard: ^1.0.8
 
 dev_dependencies:
   flutter_test:
